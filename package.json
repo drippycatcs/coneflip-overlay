@@ -1,0 +1,18 @@
+{
+  "name": "coneflip_mulitplayer",
+  "version": "1.0.0",
+  "description": "Coneflip for aque",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "DrippyCat",
+  "license": "ISC",
+  "dependencies": {
+    "csv-parser": "^3.0.0",
+    "csv-writer": "^1.6.0",
+    "express": "^4.21.0",
+    "sanitize-filename": "^1.6.3",
+    "socket.io": "^4.8.0"
+  }
+}

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConeFlip Leaderboard</title>
+    <style>
+        /* Reset default margins and paddings */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Leaderboard container */
+        .leaderboard-container {
+            position: fixed;
+            top: 20px; /* Distance from the top */
+            right: 20px; /* Distance from the right */
+            width: 250px; /* Adjust width as needed */
+            background: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
+            border-radius: 10px;
+            padding: 10px 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            z-index: 1000; /* Ensure it stays on top */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+        }
+
+        /* Title */
+        .leaderboard-container h2 {
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 10px;
+            color: #FFD700; /* Gold color for title */
+        }
+
+        /* Leaderboard table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: transparent;
+        }
+
+        th, td {
+            padding: 6px 8px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            border-bottom: 1px solid #555;
+            font-weight: normal;
+            color: #FFD700; /* Gold color for headers */
+        }
+
+        tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Top player row */
+        .top-player {
+            background: rgba(255, 215, 0, 0.2); /* Light gold tint */
+        }
+
+        /* Golden cone icon */
+        .golden-cone {
+            width: 16px;
+            height: 16px;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .leaderboard-container {
+                width: 200px;
+                top: 10px;
+                right: 10px;
+            }
+
+            .leaderboard-container h2 {
+                font-size: 16px;
+            }
+
+            th, td {
+                padding: 4px 6px;
+                font-size: 12px;
+            }
+
+            .golden-cone {
+                width: 14px;
+                height: 14px;
+                margin-right: 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="leaderboard-container">
+        <h2>Leaderboard</h2>
+        <table id="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>Wins</th>
+                    <th>Win Rate (%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Leaderboard data will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Golden Cone Image (Hidden Clone for Cloning) -->
+    <img id="golden-cone-icon" src="cone_gold.png" alt="Golden Cone" style="display: none;">
+
+    <!-- Include Socket.io client library -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        // Connect to server via Socket.io
+        const socket = io();
+
+        /**
+         * Function to render the leaderboard table.
+         * @param {Object} data - The leaderboard data and top player.
+         */
+        function renderLeaderboard(data) {
+            const tableBody = document.querySelector('#leaderboard-table tbody');
+            tableBody.innerHTML = ''; // Clear existing data
+
+            if (!data || !data.leaderboard || data.leaderboard.length === 0) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = 3; // Updated from 4 to 3
+                cell.textContent = 'No data available.';
+                cell.style.textAlign = 'center';
+                cell.style.color = '#fff';
+                row.appendChild(cell);
+                tableBody.appendChild(row);
+                return;
+            }
+
+            // Sort leaderboard by wins descending
+            const sortedLeaderboard = data.leaderboard.sort((a, b) => {
+                return b.wins - a.wins;
+            });
+
+            // Display only top 5 players
+            const topPlayers = sortedLeaderboard.slice(0, 5);
+
+            topPlayers.forEach((player, index) => {
+                const row = document.createElement('tr');
+
+                // Check if this player is the top player
+                const isTopPlayer = (player.name === data.topPlayer);
+
+                // Add class if top player
+                if (isTopPlayer) {
+                    row.classList.add('top-player');
+                }
+
+                // Player Name Cell
+                const nameCell = document.createElement('td');
+
+                if (isTopPlayer) {
+                    // Clone the golden cone icon
+                    const coneIcon = document.getElementById('golden-cone-icon').cloneNode();
+                    coneIcon.style.display = 'inline';
+                    coneIcon.classList.add('golden-cone');
+                    nameCell.appendChild(coneIcon);
+                }
+
+                const nameText = document.createElement('span');
+                nameText.textContent = player.name;
+                nameCell.appendChild(nameText);
+
+                row.appendChild(nameCell);
+
+                // Wins Cell
+                const winsCell = document.createElement('td');
+                winsCell.textContent = player.wins;
+                row.appendChild(winsCell);
+
+                // Win Rate Cell
+                const winrateCell = document.createElement('td');
+                winrateCell.textContent = player.winrate;
+                row.appendChild(winrateCell);
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        /**
+         * Function to fetch leaderboard data from the server.
+         * (Optional: If you want to fetch initially without waiting for socket event)
+         */
+        async function fetchLeaderboard() {
+            try {
+                const response = await fetch('/api/leaderboard');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching leaderboard:', error);
+                return null;
+            }
+        }
+
+        /**
+         * Initial load of the leaderboard.
+         * (Optional: If you want to fetch initially without waiting for socket event)
+         */
+        async function loadLeaderboard() {
+            const data = await fetchLeaderboard();
+            renderLeaderboard(data);
+        }
+
+        // Listen for 'leaderboard' events from the server and update the table
+        socket.on('leaderboard', function (data) {
+            renderLeaderboard(data);
+        });
+
+        // Optional: Initial fetch to display current leaderboard immediately
+        loadLeaderboard();
+    </script>
+</body>
+</html>
