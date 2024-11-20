@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Coneflip is a Twitch overlay game created for Twitch streamer [AquaIsMissing](https://www.twitch.tv/aquaismissing)
+Coneflip is a Twitch overlay game created for Twitch streamer [a "QUE" ismissing](https://www.twitch.tv/aquaismissing)
 
 ---
 
