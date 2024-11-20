@@ -18,7 +18,9 @@ const CONFIG = {
         'casehardened',
         'inverted',
         'negative',
-        'ahegao'
+        'ahegao',
+        'fade',
+        'tigertooth'
     ]
 };
 
@@ -132,7 +134,7 @@ class LeaderboardManager {
         }
 
         const newData = await this.updateLeaderboard(data);
-        return { topPlayer: newData[0].name };
+        return { topPlayer: newData[0].name || null };
     }
 
     static sortLeaderboard(data) {
@@ -174,7 +176,9 @@ class SkinsManager {
 io.on('connection', async (socket) => {
     try {
         const data = await LeaderboardManager.getLeaderboard();
-        socket.emit('goldSkin', { topPlayer: data[0].name });
+        
+        const topPlayer = data[0].name || null;
+        socket.emit('goldSkin', { topPlayer: topPlayer });
         socket.emit('leaderboard', { data });
 
         const updateStateHandler = async (playerName, isWin) => {
