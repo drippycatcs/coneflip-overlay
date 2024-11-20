@@ -17,7 +17,7 @@
             position: fixed;
             top: 20px; /* Distance from the top */
             right: 20px; /* Distance from the right */
-            width: 250px; /* Adjust width as needed */
+            width: 350px; /* Adjust width as needed */
             background: rgba(0, 0, 0, 0.6); /* Semi-transparent black background */
             border-radius: 10px;
             padding: 10px 15px;
@@ -98,13 +98,14 @@
 </head>
 <body>
     <div class="leaderboard-container">
-        <h2>Leaderboard</h2>
+        <h2>Coneflip Leaderboard</h2>
         <table id="leaderboard-table">
             <thead>
                 <tr>
                     <th>Player</th>
-                    <th>Wins</th>
-                    <th>Win Rate (%)</th>
+                    <th>Ws</th>
+                    <th>Ls</th>
+                    <th>WR (%)</th>
                 </tr>
             </thead>
             <tbody>
@@ -114,7 +115,7 @@
     </div>
 
     <!-- Golden Cone Image (Hidden Clone for Cloning) -->
-    <img id="golden-cone-icon" src="cone_gold.png" alt="Golden Cone" style="display: none;">
+    <img id="golden-cone-icon" src="skins/cone_gold.png" alt="Golden Cone" style="display: none;">
 
     <!-- Include Socket.io client library -->
     <script src="/socket.io/socket.io.js"></script>
@@ -131,7 +132,7 @@
             const tableBody = document.querySelector('#leaderboard-table tbody');
             tableBody.innerHTML = ''; // Clear existing data
 
-            if (!data || !data.leaderboard || data.leaderboard.length === 0) {
+            if (!data) {
                 const row = document.createElement('tr');
                 const cell = document.createElement('td');
                 cell.colSpan = 3; // Updated from 4 to 3
@@ -143,13 +144,8 @@
                 return;
             }
 
-            // Sort leaderboard by wins descending
-            const sortedLeaderboard = data.leaderboard.sort((a, b) => {
-                return b.wins - a.wins;
-            });
-
             // Display only top 5 players
-            const topPlayers = sortedLeaderboard.slice(0, 5);
+            const topPlayers = data.slice(0, 5);
 
             topPlayers.forEach((player, index) => {
                 const row = document.createElement('tr');
@@ -183,6 +179,11 @@
                 const winsCell = document.createElement('td');
                 winsCell.textContent = player.wins;
                 row.appendChild(winsCell);
+
+                // Wins Cell
+                const lossesCell = document.createElement('td');
+                lossesCell.textContent = player.fails;
+                row.appendChild(lossesCell);
 
                 // Win Rate Cell
                 const winrateCell = document.createElement('td');

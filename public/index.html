@@ -10,7 +10,7 @@
             overflow: hidden;
         }
 
-        #world {
+        #world, #confetti-canvas {
             display: block;
             position: absolute;
             height: 100%;
@@ -19,10 +19,6 @@
         }
 
         #confetti-canvas {
-            display: block;
-            position: absolute;
-            height: 100%;
-            width: 100%;
             z-index: 2;
         }
 
@@ -36,22 +32,6 @@
             pointer-events: none;
             border-radius: 6px;
         }
-
-        #leaderboard-link {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(255, 255, 255, 0.7);
-            padding: 10px 15px;
-            border-radius: 5px;
-            text-decoration: none;
-            color: #333;
-            font-weight: bold;
-        }
-
-        #leaderboard-link:hover {
-            background: rgba(255, 255, 255, 1);
-        }
     </style>
 </head>
 
@@ -63,6 +43,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tsparticles/confetti@3.0.3/tsparticles.confetti.bundle.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <audio id="coolSound" src="O.wav"></audio>
+    <audio id="failSound" src="bwomp.wav"></audio>
 
     <script>
         const socket = io();
@@ -70,10 +51,13 @@
         let currentTopPlayer = null;
 
         const availableSkins = {
-            default: 'cone_default.png',
-            gold: 'cone_gold.png',
-            glorp: 'cone_glorp.png',
-            
+            default: 'skins/cone_default.png',
+            gold: 'skins/cone_gold.png',
+            glorp: 'skins/cone_glorp.png',
+            casehardened: 'skins/cone_casehardened.png',
+            inverted: 'skins/cone_inverted.png',
+            negative: 'skins/cone_negative.png',
+            ahegao: 'skins/cone_ahegao.png',
         };
 
         let playerSkins = {};
@@ -83,7 +67,7 @@
                 .then(response => response.json())
                 .then(data => {
                     playerSkins = data.reduce((acc, item) => {
-                        acc[item.name] = item.skin.toLowerCase();
+                        acc[item.name] = item.skin;
                         return acc;
                     }, {});
                 })
@@ -97,7 +81,7 @@
             addCone(name);
         });
 
-        socket.on('leaderboard', function (data) {
+        socket.on('goldSkin', function (data) {
             if (data.topPlayer !== currentTopPlayer) {
                 currentTopPlayer = data.topPlayer;
                 updateConesWithTopPlayer();
@@ -140,6 +124,7 @@
         const trafficCones = [];
         const upwardForceMultiplier = 0.7;
         const coolSound = document.getElementById('coolSound');
+        const failSound = document.getElementById('failSound');
 
         const positions = [
             { name: 'center', x: window.innerWidth / 2, occupied: false, cooldown: 5000, launchDelay: 1000 },
@@ -148,28 +133,27 @@
         ];
 
         function addCone(name) {
-            const safeName = name || "Anonymous";
             let position = positions.find(pos => !pos.occupied);
             if (!position) {
-                enqueueCone(safeName);
+                enqueueCone(name);
                 return;
             }
 
             const startX = position.x;
             const startY = window.innerHeight - 85;
-            const isTopPlayer = (safeName === currentTopPlayer);
+            const isTopPlayer = (name === currentTopPlayer);
 
             let texture = availableSkins.default;
             if (isTopPlayer) {
                 texture = availableSkins.gold;
-            } else if (playerSkins[safeName]) {
-                texture = availableSkins[playerSkins[safeName]] || availableSkins.default;
+            } else if (playerSkins[name]) {
+                texture = availableSkins[playerSkins[name]] || availableSkins.default;
             }
 
             const trafficCone = Bodies.fromVertices(startX, startY, [scaledVertices], {
                 restitution: 0.2,
                 render: {
-                    sprite: { texture: texture, xScale: 0.2, yScale: 0.2 },
+                    sprite: { texture: texture, xScale: 0.24, yScale: 0.24 },
                     strokeStyle: 'black',
                     lineWidth: 2,
                     opacity: 1
@@ -180,7 +164,7 @@
             Composite.add(world, trafficCone);
 
             const nameElement = document.createElement("span");
-            nameElement.textContent = safeName;
+            nameElement.textContent = name;
             nameElement.className = 'userName';
             document.body.appendChild(nameElement);
 
@@ -211,9 +195,8 @@
         }
 
         function enqueueCone(name) {
-            const safeName = name || "Anonymous";
-            console.log(`All positions are occupied. Queuing cone for "${safeName}".`);
-            coneQueue.push(safeName);
+            console.log(`All positions are occupied. Queuing cone for "${name}".`);
+            coneQueue.push(name);
         }
 
         function processQueue() {
@@ -254,6 +237,8 @@
                         } else {
                             if (!coneObj.celebrated) {
                                 coneObj.celebrated = true;
+                                failSound.play();
+                                body.render.sprite.xScale = 0.02;
                                 socket.emit('fail', coneObj.nameElement.textContent);
                             }
                         }
@@ -317,12 +302,8 @@
         });
 
         function positionNameLabel(coneObj) {
-            const updatePosition = () => {
-                const body = coneObj.body;
-                coneObj.nameElement.style.top = `${body.position.y - 150}px`;
-                coneObj.nameElement.style.left = `${body.position.x - (coneObj.nameElement.offsetWidth / 2)}px`;
-            };
-            Events.on(engine, 'afterUpdate', updatePosition);
+            coneObj.nameElement.style.top = `${coneObj.body.position.y - 150}px`;
+            coneObj.nameElement.style.left = `${coneObj.body.position.x - (coneObj.nameElement.offsetWidth / 2)}px`;
         }
 
         function updateConesWithTopPlayer() {
@@ -349,14 +330,12 @@
             });
         }
 
-        Events.on(engine, 'afterUpdate', function () {
-            for (let i = 0; i < trafficCones.length; i++) {
-                const coneObj = trafficCones[i];
-                const body = coneObj.body;
-                coneObj.nameElement.style.top = `${body.position.y - 150}px`;
-                coneObj.nameElement.style.left = `${body.position.x - (coneObj.nameElement.offsetWidth / 2)}px`;
+        Events.on(engine, 'afterUpdate', () => {
+            trafficCones.forEach(coneObj => {
+                coneObj.nameElement.style.top = `${coneObj.body.position.y - 150}px`;
+                coneObj.nameElement.style.left = `${coneObj.body.position.x - (coneObj.nameElement.offsetWidth / 2)}px`;
                 checkConeStatus(coneObj);
-            }
+            })
         });
 
         function playConfetti(originX, originY) {

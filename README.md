@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Coneflip is a Twitch overlay game created for Twitch streamer [a "QUE" ismissing](https://www.twitch.tv/aquaismissing)
+Coneflip is a Twitch overlay game created for Twitch streamer [aquaismissing](https://www.twitch.tv/aquaismissing)
 
 ---
 
@@ -69,15 +69,9 @@ Returns the current leaderboard and the top player.
 
 **Response**:  
 ```json
-{
-  "leaderboard": [
-    { "name": "player1", "wins": 10, "fails": 5, "winrate": "66.67" }
-  ],
-  "topPlayer": "player1"
-}
+[
+    { "name": "player1", "wins": 10, "fails": 5, "winrate": "66.67" },
+    { "name": "player2", "wins": 4, "fails": 8, "winrate": "33.33" }
+	...
+]
 ```
-```json
- _._     _,-'""`-._
-(,-.`._,'(       |\`-/|
-    `-.-' \ )-`( , o o)
-          `-    \`_`"'- 
