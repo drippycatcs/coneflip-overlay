@@ -10,7 +10,8 @@
             overflow: hidden;
         }
 
-        #world, #confetti-canvas {
+        #world,
+        #confetti-canvas {
             display: block;
             position: absolute;
             height: 100%;
@@ -60,36 +61,32 @@
             ahegao: 'skins/cone_ahegao.png',
             fade: 'skins/cone_fade.png',
             tigertooth: 'skins/cone_tigertooth.png',
-
+            comic: 'skins/cone_comic.png',
         };
 
         let playerSkins = {};
 
-        function updatePlayerSkins() {
-            return fetch('/skins.json')
-                .then(response => response.json())
-                .then(data => {
-                    playerSkins = data.reduce((acc, item) => {
-                        acc[item.name] = item.skin;
-                        return acc;
-                    }, {});
-                })
-                .catch(error => {
-                    console.error("Error loading skins:", error);
-                });
+        async function updatePlayerSkins() {
+            try {
+                const response = await fetch('/api/skins/users');
+                const data = await response.json();
+
+                playerSkins = data.reduce((acc, { name, skin }) => {
+                    acc[name] = skin;
+                    return acc;
+                }, {});
+            } catch (error) {
+                console.error("Error loading skins:", error);
+            }
         }
 
-        socket.on('addCone', async function (name) {
-            await updatePlayerSkins();
-            addCone(name);
-        });
+        updatePlayerSkins();
 
-        socket.on('goldSkin', function (data) {
-            if (data.topPlayer !== currentTopPlayer) {
-                currentTopPlayer = data.topPlayer;
-                updateConesWithTopPlayer();
-            }
-        });
+        socket.on('addCone', (name) => addCone(name));
+
+        socket.on('goldSkin', (data) => currentTopPlayer = data);
+
+        socket.on('skinRefresh', () => updatePlayerSkins());
 
         const { Engine, Render, Runner, Bodies, Composite, Body, Vertices, Events } = Matter;
         const engine = Engine.create();
@@ -114,18 +111,22 @@
 
         const ground = Bodies.rectangle(window.innerWidth / 2, window.innerHeight - 10, window.innerWidth, 20, {
             isStatic: true,
-            render: { fillStyle: 'transparent', strokeStyle: 'transparent' }
+            render: { fillStyle: 'transparent', strokeStyle: 'transparent' },
+            collisionFilter: {
+                group: -1
+            },
+            friction: 1,
+            frictionStatic: 1
         });
         Composite.add(world, ground);
 
-        const coneVertices = Vertices.fromPath('0 6200.83 992.78 6200.83 2481.95 0 3203.97 0 4723.22 6200.83 5806.26 6200.83 5806.26 7795.3 0 7795.3');
-        const scaledVertices = coneVertices.map(vertex => ({
-            x: vertex.x * 0.02,
-            y: vertex.y * 0.02
-        }));
+        const coneVertices = Vertices.fromPath('0 6200.83 992.78 6200.83 2481.95 0 3203.97 0 4723.22 6200.83 5806.26 6200.83 5806.26 7795.3 0 7795.3')
+            .map(v => ({
+                x: v.x * 0.02,
+                y: v.y * 0.02
+            }));
 
         const trafficCones = [];
-        const upwardForceMultiplier = 0.7;
         const coolSound = document.getElementById('coolSound');
         const failSound = document.getElementById('failSound');
 
@@ -138,22 +139,20 @@
         function addCone(name) {
             let position = positions.find(pos => !pos.occupied);
             if (!position) {
-                enqueueCone(name);
+                coneQueue.push(name);
                 return;
             }
 
-            const startX = position.x;
-            const startY = window.innerHeight - 85;
-            const isTopPlayer = (name === currentTopPlayer);
+            const isTopPlayer = name === currentTopPlayer;
 
             let texture = availableSkins.default;
             if (isTopPlayer) {
                 texture = availableSkins.gold;
-            } else if (playerSkins[name]) {
+            } else {
                 texture = availableSkins[playerSkins[name]] || availableSkins.default;
             }
 
-            const trafficCone = Bodies.fromVertices(startX, startY, [scaledVertices], {
+            const trafficCone = Bodies.fromVertices(position.x, window.innerHeight - 85, [coneVertices], {
                 restitution: 0.2,
                 render: {
                     sprite: { texture: texture, xScale: 0.24, yScale: 0.24 },
@@ -182,7 +181,7 @@
                 isTopPlayer: isTopPlayer
             };
             trafficCones.push(coneObj);
-            positionNameLabel(coneObj);
+            positionNameLabel(coneObj)
 
             position.occupied = true;
             setTimeout(() => {
@@ -197,11 +196,6 @@
             }, position.launchDelay);
         }
 
-        function enqueueCone(name) {
-            console.log(`All positions are occupied. Queuing cone for "${name}".`);
-            coneQueue.push(name);
-        }
-
         function processQueue() {
             if (coneQueue.length === 0) return;
             const nextConeName = coneQueue.shift();
@@ -209,18 +203,19 @@
         }
 
         function applyRandomUpwardForceAndSpin(body) {
-            const forceMagnitude = upwardForceMultiplier + Math.random() * 0.05;
+            const forceMagnitude = 0.7 + Math.random() * 0.05;
             const horizontalForce = (Math.random() - 0.5) * 0.1;
-            const force = { x: horizontalForce, y: -forceMagnitude };
-            Body.applyForce(body, { x: body.position.x, y: body.position.y }, force);
-
+            const spinDirection = Math.random() > 0.5 ? 1 : -1;
             const angularVelocity = 0.2 + Math.random() * 0.8;
-            Body.setAngularVelocity(body, angularVelocity * (Math.random() > 0.5 ? 1 : -1));
+
+            const force = { x: horizontalForce, y: -forceMagnitude };
+            Body.applyForce(body, body.position, force);
+            Body.setAngularVelocity(body, angularVelocity * spinDirection);
         }
 
         function checkConeStatus(coneObj) {
-            const body = coneObj.body;
-            if (!coneObj.hasLaunched) return;
+            const { body, hasLaunched, nameElement } = coneObj;
+            if (!hasLaunched) return;
 
             const isStationary = Math.abs(body.angularVelocity) < 0.05 &&
                 Math.abs(body.velocity.x) < 0.05 &&
@@ -233,16 +228,14 @@
                             if (!coneObj.celebrated) {
                                 coneObj.celebrated = true;
                                 coolSound.play();
-                                const origin = calculateConfettiOrigin(body.position);
-                                playConfetti(origin.x, origin.y);
-                                socket.emit('win', coneObj.nameElement.textContent);
+                                triggerConfetti(body.position);
+                                socket.emit('win', nameElement.textContent);
                             }
                         } else {
                             if (!coneObj.celebrated) {
                                 coneObj.celebrated = true;
                                 failSound.play();
-                                body.render.sprite.xScale = 0.02;
-                                socket.emit('fail', coneObj.nameElement.textContent);
+                                socket.emit('fail', nameElement.textContent);
                             }
                         }
                         startFadeOut(coneObj);
@@ -257,34 +250,26 @@
             }
         }
 
-        function calculateConfettiOrigin(position) {
-            const offset = 120;
-            let originX = position.x / window.innerWidth;
-            let originY = (position.y - offset) / window.innerHeight;
-            originY = Math.max(0, Math.min(1, originY));
-            return { x: originX, y: originY };
+        function positionNameLabel(coneObj) {
+            coneObj.nameElement.style.top = `${coneObj.body.position.y - 150}px`;
+            coneObj.nameElement.style.left = `${coneObj.body.position.x - (coneObj.nameElement.offsetWidth / 2)}px`;
         }
 
         function isConeUpright(body) {
-            let angle = body.angle % (2 * Math.PI);
-            if (angle > Math.PI) angle -= 2 * Math.PI;
-            if (angle < -Math.PI) angle += 2 * Math.PI;
-            return Math.abs(angle) < 0.1 || Math.abs(Math.abs(angle) - Math.PI) < 0.1;
+            const angle = Math.abs((body.angle + Math.PI) % (2 * Math.PI) - Math.PI);
+            return angle < 0.1 || Math.abs(angle - Math.PI) < 0.1;
         }
 
         function startFadeOut(coneObj) {
-            const body = coneObj.body;
+            const { body, nameElement } = coneObj;
             let opacity = 1.0;
-            const fadeDuration = 1000;
-            const fadeStep = 10;
-            const opacityReduction = fadeStep / fadeDuration;
 
             coneObj.fadeInterval = setInterval(() => {
-                opacity -= opacityReduction;
+                opacity -= 0.01;
                 if (opacity <= 0) {
                     opacity = 0;
                     clearInterval(coneObj.fadeInterval);
-                    coneObj.nameElement.remove();
+                    nameElement.remove();
                     Composite.remove(world, body);
 
                     const index = trafficCones.indexOf(coneObj);
@@ -293,71 +278,33 @@
                     }
                 }
                 body.render.opacity = opacity;
-                coneObj.nameElement.style.opacity = opacity;
-            }, fadeStep);
-        }
-
-        window.addEventListener('resize', () => {
-            Render.lookAt(render, {
-                min: { x: 0, y: 0 },
-                max: { x: window.innerWidth, y: window.innerHeight }
-            });
-        });
-
-        function positionNameLabel(coneObj) {
-            coneObj.nameElement.style.top = `${coneObj.body.position.y - 150}px`;
-            coneObj.nameElement.style.left = `${coneObj.body.position.x - (coneObj.nameElement.offsetWidth / 2)}px`;
-        }
-
-        function updateConesWithTopPlayer() {
-            trafficCones.forEach(coneObj => {
-                const isNowTopPlayer = (coneObj.nameElement.textContent === currentTopPlayer);
-                if (coneObj.isTopPlayer && !isNowTopPlayer) {
-                    coneObj.isTopPlayer = false;
-                    const playerName = coneObj.nameElement.textContent;
-                    const newTexture = playerSkins[playerName] ? availableSkins[playerSkins[playerName]] : availableSkins.default;
-                    updateConeTexture(coneObj.body, newTexture);
-                } else if (!coneObj.isTopPlayer && isNowTopPlayer) {
-                    coneObj.isTopPlayer = true;
-                    updateConeTexture(coneObj.body, availableSkins.gold);
-                }
-            });
-        }
-
-        function updateConeTexture(body, texture) {
-            Body.set(body, 'render', {
-                sprite: { texture: texture, xScale: 0.02, yScale: 0.02 },
-                strokeStyle: 'black',
-                lineWidth: 2,
-                opacity: body.render.opacity
-            });
+                nameElement.style.opacity = opacity;
+            }, 10);
         }
 
         Events.on(engine, 'afterUpdate', () => {
             trafficCones.forEach(coneObj => {
-                coneObj.nameElement.style.top = `${coneObj.body.position.y - 150}px`;
-                coneObj.nameElement.style.left = `${coneObj.body.position.x - (coneObj.nameElement.offsetWidth / 2)}px`;
+                positionNameLabel(coneObj)
                 checkConeStatus(coneObj);
             })
         });
 
-        function playConfetti(originX, originY) {
-            const count = 200;
-            const defaults = { origin: { x: originX, y: originY } };
+        function triggerConfetti({ x, y }) {
+            const origin = {
+                x: x / window.innerWidth,
+                y: Math.max(0, Math.min(1, (y - 120) / window.innerHeight))
+            };
 
-            function fire(particleRatio, opts) {
-                confetti(
-                    Object.assign({}, defaults, opts, {
-                        particleCount: Math.floor(count * particleRatio),
-                    })
-                );
-            }
+            const defaults = { origin };
+            const variants = [
+                { spread: 26, startVelocity: 55, particleCount: 50 },
+                { spread: 60, particleCount: 40 },
+                { spread: 100, decay: 0.91, scalar: 0.8, particleCount: 70 },
+                { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2, particleCount: 20 },
+                { spread: 120, startVelocity: 45, particleCount: 20 }
+            ];
 
-            fire(0.25, { spread: 26, startVelocity: 55 });
-            fire(0.2, { spread: 60 });
-            fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
-            fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
-            fire(0.1, { spread: 120, startVelocity: 45 });
+            variants.forEach(opts => confetti({ ...defaults, ...opts }));
         }
     </script>
 </body>

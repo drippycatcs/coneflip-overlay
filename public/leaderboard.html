@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ConeFlip Leaderboard</title>
+    <title>Coneflip Leaderboard</title>
     <style>
         * {
             margin: 0;
@@ -13,22 +14,30 @@
 
         .leaderboard-container {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 350px;
-            background: rgba(0, 0, 0, 0.6);
-            border-radius: 10px;
-            padding: 10px 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            top: 30px;
+            right: -600px;
+            width: 525px;
+            background: rgba(0, 0, 0, .98);
+            border-radius: 15px;
+            padding: 15px 25px;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
             z-index: 1000;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #fff;
+            transition: right 0.8s cubic-bezier(0.25, 0.8, 0.25, 1),
+                opacity 0.5s ease-in-out;
+            opacity: 0;
+        }
+
+        .leaderboard-container.visible {
+            right: 20px;
+            opacity: 1;
         }
 
         .leaderboard-container h2 {
-            font-size: 18px;
+            font-size: 30px;
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             color: #94B658;
         }
 
@@ -38,14 +47,15 @@
             background: transparent;
         }
 
-        th, td {
-            padding: 6px 8px;
+        th,
+        td {
+            padding: 9px 12px;
             text-align: left;
-            font-size: 14px;
+            font-size: 21px;
         }
 
         th {
-            border-bottom: 1px solid #555;
+            border-bottom: 4px solid #555;
             font-weight: normal;
             color: #94B658;
         }
@@ -59,40 +69,17 @@
         }
 
         .golden-cone {
-            width: 16px;
-            height: 16px;
+            width: 24px;
             vertical-align: middle;
-            margin-right: 6px;
+            margin-right: 9px;
         }
 
         .placeholder-row {
             color: rgba(255, 255, 255, 0.3);
         }
-
-        @media (max-width: 600px) {
-            .leaderboard-container {
-                width: 200px;
-                top: 10px;
-                right: 10px;
-            }
-
-            .leaderboard-container h2 {
-                font-size: 16px;
-            }
-
-            th, td {
-                padding: 4px 6px;
-                font-size: 12px;
-            }
-
-            .golden-cone {
-                width: 14px;
-                height: 14px;
-                margin-right: 4px;
-            }
-        }
     </style>
 </head>
+
 <body>
     <div class="leaderboard-container">
         <h2>Coneflip Leaderboard</h2>
@@ -105,103 +92,75 @@
                     <th>WR (%)</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+                <tr id="row-1"></tr>
+                <tr id="row-2"></tr>
+                <tr id="row-3"></tr>
+                <tr id="row-4"></tr>
+                <tr id="row-5"></tr>
+            </tbody>
         </table>
     </div>
-    <img id="golden-cone-icon" src="skins/cone_gold.png" alt="Golden Cone" style="display: none;">
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        function updateTable(data) {
+            const rows = document.querySelectorAll("#leaderboard-table tbody tr");
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                if (data[i]) {
+                    const player = data[i];
+                    const isTopPlayer = i === 0;
+                    const goldenConeIcon = isTopPlayer
+                        ? '<img src="skins/cone_gold.png" class="golden-cone">'
+                        : '';
+                    row.innerHTML = `
+                        <td>${goldenConeIcon}${player.name || '—'}</td>
+                        <td>${player.wins || '—'}</td>
+                        <td>${player.fails || '—'}</td>
+                        <td>${player.winrate || '—'}</td>
+                    `;
+                    row.className = isTopPlayer ? 'top-player' : '';
+                } else {
+                    row.innerHTML = '<td>—</td><td>—</td><td>—</td><td>—</td>';
+                    row.className = 'placeholder-row';
+                }
+            }
+        }
+
+        async function initialize() {
+            const data = await fetch('/api/leaderboard')
+                .then(response => response.json())
+                .then(data => { return data })
+                .catch(error => console.error("Error loading leaderboard:", error));
+            updateTable(data || []);
+        }
+
+        initialize(); // Populate leaderboard on load
+
+        let isVisible = false;
+        let hideTimeout;
+
         const socket = io();
 
-        function renderLeaderboard(data) {
-            const tableBody = document.querySelector('#leaderboard-table tbody');
-            tableBody.innerHTML = '';
-
-            if (!data || !data.length) {
-                data = [];
-            }
-
-            const topPlayers = data.slice(0, 5);
-
-            topPlayers.forEach((player, index) => {
-                const row = document.createElement('tr');
-                if (index === 0) {
-                    row.classList.add('top-player');
-                }
-
-                const nameCell = document.createElement('td');
-                if (index === 0) {
-                    const coneIcon = document.getElementById('golden-cone-icon').cloneNode();
-                    coneIcon.style.display = 'inline';
-                    coneIcon.classList.add('golden-cone');
-                    nameCell.appendChild(coneIcon);
-                }
-                const nameText = document.createElement('span');
-                nameText.textContent = player.name || '-';
-                nameCell.appendChild(nameText);
-                row.appendChild(nameCell);
-
-                const winsCell = document.createElement('td');
-                winsCell.textContent = player.wins || '-';
-                row.appendChild(winsCell);
-
-                const lossesCell = document.createElement('td');
-                lossesCell.textContent = player.fails || '-';
-                row.appendChild(lossesCell);
-
-                const winrateCell = document.createElement('td');
-                winrateCell.textContent = player.winrate || '-';
-                row.appendChild(winrateCell);
-
-                tableBody.appendChild(row);
-            });
-
-            const placeholdersNeeded = 5 - topPlayers.length;
-            for (let i = 0; i < placeholdersNeeded; i++) {
-                const placeholderRow = document.createElement('tr');
-                placeholderRow.classList.add('placeholder-row');
-
-                for (let j = 0; j < 4; j++) {
-                    const placeholderCell = document.createElement('td');
-                    placeholderCell.textContent = '-';
-                    placeholderRow.appendChild(placeholderCell);
-                }
-
-                tableBody.appendChild(placeholderRow);
-            }
-        }
-
-        async function fetchLeaderboard() {
-            try {
-                const response = await fetch('/api/leaderboard');
-                if (!response.ok) throw new Error('Failed to fetch leaderboard');
-                const data = await response.json();
-                return data;
-            } catch (error) {
-                console.error('Error fetching leaderboard:', error);
-                return null;
-            }
-        }
-
-        async function loadLeaderboard() {
-            const data = await fetchLeaderboard();
-            if (data && data.length) {
-                renderLeaderboard(data);
-            } else {
-                renderLeaderboard([]);
-            }
-        }
-
-        socket.on('leaderboard', data => {
-            loadLeaderboard();
-            if (data && data.length) {
-                renderLeaderboard(data);
-            } else {
-                console.error('Received invalid leaderboard data via socket:', data);
-            }
+        socket.on('refreshLb', (data) => {
+            updateTable(data);
         });
 
-        loadLeaderboard();
+        socket.on('showLb', () => {
+            if (isVisible) return;
+
+            const leaderboard = document.querySelector('.leaderboard-container');
+            leaderboard.classList.add('visible');
+            isVisible = true;
+
+            clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(() => {
+                leaderboard.classList.remove('visible');
+                isVisible = false;
+            }, 10000);
+        })
     </script>
+
 </body>
+
 </html>

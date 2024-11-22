@@ -13,104 +13,146 @@ const CONFIG = {
         PUBLIC: path.join(__dirname, 'public')
     },
     CACHE_DURATION: 5000,
-    VALID_SKINS: [
-        'glorp',
-        'casehardened',
-        'inverted',
-        'negative',
-        'ahegao',
-        'fade',
-        'tigertooth'
-    ]
+    SKINS: {
+        glorp: { weight: 40 },
+        inverted: { weight: 40 },
+        negative: { weight: 20 },
+        comic: { weight: 20 },
+        tigertooth: { weight: 10 },
+        casehardened: { weight: 10 },
+        ahegao: { weight: 3 },
+        fade: { weight: 3 },
+    }
 };
 
-let lbCache = null;
-let lastLbUpdate = 0;
+const errorHandler = (err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
+};
 
 app.use(express.static(CONFIG.PATHS.PUBLIC));
+app.use(errorHandler);
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(CONFIG.PATHS.PUBLIC, 'index.html'));
 });
 
-app.get('/leaderboard.html', (req, res) => {
+app.get('/leaderboard', (req, res) => {
     res.sendFile(path.join(CONFIG.PATHS.PUBLIC, 'leaderboard.html'));
 });
 
-app.get('/skins.json', (req, res) => {
-    res.sendFile(CONFIG.PATHS.SKINS);
-});
-
-app.get('/addcone', (req, res) => {
-    const name = req.query.name.toLocaleLowerCase().trim() || '';
+app.get('/api/cones/add', (req, res) => {
+    const name = req.query.name?.toLowerCase().trim() || '';
     if (!name) return res.status(400).send('Name cannot be blank or invalid.');
     io.emit('addCone', name);
     res.sendStatus(200);
 });
 
-app.get('/setskin', async (req, res) => {
-    const name = req.query.name.toLocaleLowerCase().trim() || '';
-    const skin = req.query.skin.toLocaleLowerCase().trim() || '';
-
-    if (!name || !skin) return res.status(400).send('Name and skin must be provided.');
-
+app.get('/api/leaderboard', async (req, res, next) => {
     try {
-        const result = await SkinsManager.setSkin(name, skin);
-        res.send(result);
-    } catch (err) {
-        const statusCode = err.message.includes('Invalid skin') ? 400 : 500;
-        res.status(statusCode).send(err.message);
-    }
-});
-
-app.get('/api/leaderboard', async (req, res) => {
-    try {
+        if (req.query.show === 'true') {
+            io.emit('showLb');
+            return res.sendStatus(200);
+        }
         const data = await LeaderboardManager.getLeaderboard();
         res.json(data);
     } catch (err) {
-        res.status(500).json({ error: 'Internal Server Error' });
+        next(err);
     }
 });
 
-app.get('/api/leaderboard/:name', async (req, res) => {
+app.get('/api/leaderboard/:name', async (req, res, next) => {
     try {
+        const name = req.params.name?.toLowerCase().trim() || '';
         const data = await LeaderboardManager.getLeaderboard();
-        const rank = data.findIndex((r) => r.name.toLowerCase() === req.params.name.toLowerCase()) + 1;
+        const index = data.findIndex((r) => r.name === name);
 
-        if (!rank) return res.send('did no coneflips.');
+        if (index === -1) return res.send('did no coneflips.');
 
-        const player = data[rank - 1];
-        res.send(`coneflip rank: ${rank}/${data.length} (Ws: ${player.wins} / Ls: ${player.fails} / WR%: ${player.winrate})`);
+        const player = data[index];
+        res.send(`coneflip rank: ${index + 1}/${data.length} (Ws: ${player.wins} / Ls: ${player.fails} / WR%: ${player.winrate})`);
     } catch (err) {
-        res.status(500).json({ error: 'Internal Server Error' });
+        next(err);
     }
+});
+
+app.get('/api/skins/set', async (req, res, next) => {
+    const name = req.query.name?.toLowerCase().trim() || '';
+    const skin = req.query.skin?.toLowerCase().trim() || '';
+    const random = req.query.random === 'true';
+
+    if (!name) return res.status(400).json('Name must be provided.');
+
+    try {
+        let result;
+
+        if (random) {
+            result = await SkinsManager.setRandomSkin(name);
+        } else {
+            if (!skin) {
+                return res.status(400).json({ error: 'Skin must be provided when random is false.' });
+            }
+            result = await SkinsManager.setSkin(name, skin);
+        }
+
+        res.send(result);
+        io.emit('skinRefresh');
+    } catch (err) {
+        err.status = err.message.includes('Invalid skin') ? 400 : 500;
+        next(err);
+    }
+});
+
+app.get('/api/skins/users', async (req, res, next) => {
+    try {
+        const data = await SkinsManager.getUserSkins();
+        res.json(data);
+    } catch (err) {
+        next(err);
+    }
+});
+
+app.get('/api/skins/odds', (req, res) => {
+    res.send(SkinsManager.calculateSkinOdds());
 });
 
 class LeaderboardManager {
+    static cache = {
+        data: null,
+        lastUpdate: 0
+    };
+
     static async initialize() {
         try {
             await fs.access(CONFIG.PATHS.LEADERBOARD);
         } catch {
+            await fs.mkdir(path.dirname(CONFIG.PATHS.LEADERBOARD), { recursive: true });
             await fs.writeFile(CONFIG.PATHS.LEADERBOARD, JSON.stringify([]), 'utf8');
         }
     }
 
     static async getLeaderboard() {
         const now = Date.now();
-        if (lbCache && (now - lastLbUpdate < CONFIG.CACHE_DURATION)) return lbCache;
+        if (this.cache.data && (now - this.cache.lastUpdate < CONFIG.CACHE_DURATION)) {
+            return this.cache.data;
+        }
 
-        const data = await fs.readFile(CONFIG.PATHS.LEADERBOARD, 'utf8');
-        lbCache = JSON.parse(data);
-        lastLbUpdate = now;
-        return lbCache;
+        try {
+            const data = await fs.readFile(CONFIG.PATHS.LEADERBOARD, 'utf8');
+            this.cache.data = JSON.parse(data);
+            this.cache.lastUpdate = now;
+            return this.cache.data;
+        } catch (err) {
+            throw new Error('Failed to read leaderboard data');
+        }
     }
 
     static async updateLeaderboard(data) {
         const sortedData = this.sortLeaderboard(data);
         await fs.writeFile(CONFIG.PATHS.LEADERBOARD, JSON.stringify(sortedData, null, 2), 'utf8');
-        lbCache = sortedData;
-        lastLbUpdate = Date.now();
-        return lbCache;
+        this.cache.data = sortedData;
+        this.cache.lastUpdate = Date.now();
+        return this.cache.data;
     }
 
     static async updatePlayer(playerName, isWin) {
@@ -118,11 +160,8 @@ class LeaderboardManager {
         const player = data.find(entry => entry.name === playerName);
 
         if (player) {
-            if (isWin) {
-                player.wins += 1;
-            } else {
-                player.fails += 1;
-            }
+            if (isWin) player.wins++;
+            else player.fails++;
             player.winrate = ((player.wins / (player.wins + player.fails)) * 100).toFixed(2);
         } else {
             data.push({
@@ -133,24 +172,32 @@ class LeaderboardManager {
             });
         }
 
-        const newData = await this.updateLeaderboard(data);
-        return { topPlayer: newData[0].name || null };
+        return this.updateLeaderboard(data);
     }
 
     static sortLeaderboard(data) {
-        const sorted = data.sort((a, b) => {
+        return [...data].sort((a, b) => {
             if (b.wins !== a.wins) return b.wins - a.wins; // We sort by descending wins
             if (a.wins > 0) return b.winrate - a.winrate; // Then by winrate
             if (a.fails !== b.fails) return a.fails - b.fails; // After we sort by ascending fails
             return a.name.localeCompare(b.name); // Finally we do alphabetical
         });
-        return sorted;
     }
 }
 
 class SkinsManager {
-    static isValidSkin(skin) {
-        return CONFIG.VALID_SKINS.includes(skin);
+    static async initialize() {
+        try {
+            await fs.access(CONFIG.PATHS.SKINS);
+        } catch {
+            await fs.mkdir(path.dirname(CONFIG.PATHS.SKINS), { recursive: true });
+            await fs.writeFile(CONFIG.PATHS.SKINS, JSON.stringify([]), 'utf8');
+        }
+    }
+
+    static async getUserSkins() {
+        const data = await fs.readFile(CONFIG.PATHS.SKINS, 'utf8');
+        return JSON.parse(data);
     }
 
     static async setSkin(name, skin) {
@@ -158,33 +205,66 @@ class SkinsManager {
             throw new Error('Invalid skin.');
         }
 
-        const data = await fs.readFile(CONFIG.PATHS.SKINS, 'utf8');
-        const skins = JSON.parse(data);
+        const data = await this.getUserSkins();
+        const playerIndex = data.findIndex(user => user.name === name);
 
-        const existingIndex = skins.findIndex(user => user.name === name);
-        if (existingIndex !== -1) {
-            skins[existingIndex].skin = skin;
+        if (playerIndex === -1) {
+            data.push({ name, skin });
         } else {
-            skins.push({ name, skin });
+            data[playerIndex].skin = skin;
         }
 
-        await fs.writeFile(CONFIG.PATHS.SKINS, JSON.stringify(skins, null, 2), 'utf8');
+        await fs.writeFile(CONFIG.PATHS.SKINS, JSON.stringify(data, null, 2), 'utf8');
         return `Skin for ${name} updated to ${skin}`;
+    }
+
+    static async setRandomSkin(name) {
+        const totalWeight = Object.values(CONFIG.SKINS).reduce((sum, skin) => sum + skin.weight, 0);
+        let currentWeight = 0;
+        const random = Math.random() * totalWeight;
+
+        for (const [skin, data] of Object.entries(CONFIG.SKINS)) {
+            currentWeight += data.weight;
+            if (random <= currentWeight) {
+                await this.setSkin(name, skin);
+                const odds = (data.weight / totalWeight * 100).toFixed(1);
+                return `you received ${skin} (${odds}%)`;
+            }
+        }
+    }
+
+    static calculateSkinOdds() {
+        const totalWeight = Object.values(CONFIG.SKINS).reduce((sum, skin) => sum + skin.weight, 0);
+        return Object.entries(CONFIG.SKINS)
+            .map(([skin, data]) => `${skin} (${(data.weight / totalWeight * 100).toFixed(1)}%)`)
+            .join(', ');
+    }
+
+    static isValidSkin(skin) {
+        return skin in CONFIG.SKINS;
     }
 }
 
 io.on('connection', async (socket) => {
+    let topPlayer = null;
+
     try {
         const data = await LeaderboardManager.getLeaderboard();
-        
-        const topPlayer = data[0].name || null;
-        socket.emit('goldSkin', { topPlayer: topPlayer });
-        socket.emit('leaderboard', { data });
+        topPlayer = data[0]?.name || null;
+        socket.emit('refreshLb', data);
+        socket.emit('goldSkin', topPlayer);
 
         const updateStateHandler = async (playerName, isWin) => {
             try {
                 const result = await LeaderboardManager.updatePlayer(playerName, isWin);
-                io.emit('leaderboard', result);
+                const newTopPlayer = result[0]?.name;
+
+                if (newTopPlayer !== topPlayer) {
+                    topPlayer = newTopPlayer;
+                    socket.emit('goldSkin', topPlayer);
+                }
+
+                io.emit('refreshLb', result);
             } catch (err) {
                 console.error(`Error updating player state: ${err.message}`);
             }
@@ -192,17 +272,25 @@ io.on('connection', async (socket) => {
 
         socket.on('win', (playerName) => updateStateHandler(playerName, true));
         socket.on('fail', (playerName) => updateStateHandler(playerName, false));
-
     } catch (err) {
         console.error('Socket connection error:', err);
     }
 });
 
 async function startServer() {
-    await LeaderboardManager.initialize();
-    http.listen(CONFIG.PORT, () => {
-        console.log(`Server is running on port ${CONFIG.PORT}`);
-    });
+    try {
+        await Promise.all([
+            LeaderboardManager.initialize(),
+            SkinsManager.initialize()
+        ]);
+
+        http.listen(CONFIG.PORT, () => {
+            console.log(`Server is running on port ${CONFIG.PORT}`);
+        });
+    } catch (err) {
+        console.error('Failed to start server:', err);
+        process.exit(1);
+    }
 }
 
-startServer().catch(console.error);
+startServer();
