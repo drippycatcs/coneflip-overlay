@@ -177,7 +177,7 @@ io.on('connection', async (socket) => {
     try {
         const data = await LeaderboardManager.getLeaderboard();
         
-        const topPlayer = data[0].name || null;
+        const topPlayer = data[0]?.name || null;
         socket.emit('goldSkin', { topPlayer: topPlayer });
         socket.emit('leaderboard', { data });
 
