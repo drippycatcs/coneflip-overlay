@@ -149,6 +149,14 @@ class LeaderboardManager {
 }
 
 class SkinsManager {
+    static async initialize() {
+        try {
+            await fs.access(CONFIG.PATHS.SKINS);
+        } catch {
+            await fs.writeFile(CONFIG.PATHS.SKINS, JSON.stringify([]), 'utf8');
+        }
+    }
+
     static isValidSkin(skin) {
         return CONFIG.VALID_SKINS.includes(skin);
     }
@@ -200,6 +208,7 @@ io.on('connection', async (socket) => {
 
 async function startServer() {
     await LeaderboardManager.initialize();
+    await SkinsManager.initialize();
     http.listen(CONFIG.PORT, () => {
         console.log(`Server is running on port ${CONFIG.PORT}`);
     });
