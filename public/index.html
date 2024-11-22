@@ -14,8 +14,8 @@
         #confetti-canvas {
             display: block;
             position: absolute;
-            height: 100%;
             width: 100%;
+            height: 100%;
             z-index: 0;
         }
 
@@ -24,7 +24,7 @@
         }
 
         .userName {
-            position: absolute;
+            position: fixed;
             font-family: Arial, Helvetica, sans-serif;
             background-color: rgba(0, 0, 0, 0.7);
             padding: 5px 10px;
@@ -33,11 +33,83 @@
             pointer-events: none;
             border-radius: 6px;
         }
+
+
+        #celebration-container {
+            display: block;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            animation: fade-in 1s ease-in-out forwards;
+
+        }
+
+        .fadeoutgold {
+            animation: fade-out-gold 1s ease-in-out forwards !important;
+        }
+
+        #celebration-container.hidden {
+            display: none;
+        }
+
+        #celebration-container.visible {
+            display: block;
+        }
+
+        #player-details img {
+
+            height: 150px;
+
+            margin-bottom: 20px;
+
+        }
+
+        #player-details h1 {
+            font-size: 3rem;
+            font-family: Arial, Helvetica, sans-serif;
+            color: gold;
+            margin: 0;
+        }
+
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+
+        @keyframes fade-out-gold {
+            from {
+                opacity: 1;
+
+            }
+
+            to {
+                opacity: 0;
+
+            }
+        }
     </style>
 </head>
 
 <body>
+
     <canvas id="confetti-canvas"></canvas>
+    <div id="celebration-container" class="hidden">
+        <div id="player-details">
+            <img id="player-image" src="skins/cone_gold.png">
+            <h1 id="player-name">zfqzfqf</h1>
+        </div>
+    </div>
     <canvas id="world"></canvas>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
@@ -45,267 +117,420 @@
     <script src="/socket.io/socket.io.js"></script>
     <audio id="coolSound" src="O.wav"></audio>
     <audio id="failSound" src="bwomp.wav"></audio>
+    <audio id="newGold" src="newGold.wav"></audio>
 
     <script>
-        const socket = io();
-        const coneQueue = [];
-        let currentTopPlayer = null;
+        (() => {
 
-        const availableSkins = {
-            default: 'skins/cone_default.png',
-            gold: 'skins/cone_gold.png',
-            glorp: 'skins/cone_glorp.png',
-            casehardened: 'skins/cone_casehardened.png',
-            inverted: 'skins/cone_inverted.png',
-            negative: 'skins/cone_negative.png',
-            ahegao: 'skins/cone_ahegao.png',
-            fade: 'skins/cone_fade.png',
-            tigertooth: 'skins/cone_tigertooth.png',
-            comic: 'skins/cone_comic.png',
-        };
+            const DEBUG_MODE = false;
+            const {
+                Engine,
+                Render,
+                Runner,
+                Bodies,
+                Composite,
+                Body,
+                Events,
+                Vertices,
+            } = Matter;
 
-        let playerSkins = {};
+            class GameManager {
+                constructor() {
+                    this.socket = io();
+                    this.engine = Engine.create();
+                    this.world = this.engine.world;
+                    this.world.gravity.y = 1.0;
+                    this.render = Render.create({
+                        canvas: document.getElementById('world'),
+                        engine: this.engine,
+                        options: {
+                            width: window.innerWidth,
+                            height: window.innerHeight,
+                            wireframes: DEBUG_MODE,
+                            background: 'none',
+                        },
+                    });
+                    Render.run(this.render);
+                    this.runner = Runner.create();
+                    Runner.run(this.runner, this.engine);
 
-        async function updatePlayerSkins() {
-            try {
-                const response = await fetch('/api/skins/users');
-                const data = await response.json();
+                    this.coneManager = new ConeManager(this);
+                    this.currentTopPlayer = null;
+                    this.playerSkins = {};
 
-                playerSkins = data.reduce((acc, { name, skin }) => {
-                    acc[name] = skin;
-                    return acc;
-                }, {});
-            } catch (error) {
-                console.error("Error loading skins:", error);
-            }
-        }
-
-        updatePlayerSkins();
-
-        socket.on('addCone', (name) => addCone(name));
-
-        socket.on('goldSkin', (data) => currentTopPlayer = data);
-
-        socket.on('skinRefresh', () => updatePlayerSkins());
-
-        const { Engine, Render, Runner, Bodies, Composite, Body, Vertices, Events } = Matter;
-        const engine = Engine.create();
-        const world = engine.world;
-
-        engine.world.gravity.y = 1.0;
-        const canvas = document.getElementById('world');
-        const render = Render.create({
-            canvas: canvas,
-            engine: engine,
-            options: {
-                width: window.innerWidth,
-                height: window.innerHeight,
-                wireframes: false,
-                background: 'none'
-            }
-        });
-
-        Render.run(render);
-        const runner = Runner.create({ delta: 1000 / 60 });
-        Runner.run(runner, engine);
-
-        const ground = Bodies.rectangle(window.innerWidth / 2, window.innerHeight - 10, window.innerWidth, 20, {
-            isStatic: true,
-            render: { fillStyle: 'transparent', strokeStyle: 'transparent' },
-            collisionFilter: {
-                group: -1
-            },
-            friction: 1,
-            frictionStatic: 1
-        });
-        Composite.add(world, ground);
-
-        const coneVertices = Vertices.fromPath('0 6200.83 992.78 6200.83 2481.95 0 3203.97 0 4723.22 6200.83 5806.26 6200.83 5806.26 7795.3 0 7795.3')
-            .map(v => ({
-                x: v.x * 0.02,
-                y: v.y * 0.02
-            }));
-
-        const trafficCones = [];
-        const coolSound = document.getElementById('coolSound');
-        const failSound = document.getElementById('failSound');
-
-        const positions = [
-            { name: 'center', x: window.innerWidth / 2, occupied: false, cooldown: 5000, launchDelay: 1000 },
-            { name: 'left', x: window.innerWidth / 4, occupied: false, cooldown: 5000, launchDelay: 1000 },
-            { name: 'right', x: (3 * window.innerWidth) / 4, occupied: false, cooldown: 5000, launchDelay: 1000 }
-        ];
-
-        function addCone(name) {
-            let position = positions.find(pos => !pos.occupied);
-            if (!position) {
-                coneQueue.push(name);
-                return;
-            }
-
-            const isTopPlayer = name === currentTopPlayer;
-
-            let texture = availableSkins.default;
-            if (isTopPlayer) {
-                texture = availableSkins.gold;
-            } else {
-                texture = availableSkins[playerSkins[name]] || availableSkins.default;
-            }
-
-            const trafficCone = Bodies.fromVertices(position.x, window.innerHeight - 85, [coneVertices], {
-                restitution: 0.2,
-                render: {
-                    sprite: { texture: texture, xScale: 0.24, yScale: 0.24 },
-                    strokeStyle: 'black',
-                    lineWidth: 2,
-                    opacity: 1
+                    this.setupGround();
+                    this.setupEvents();
+                    this.updatePlayerSkins();
                 }
-            });
 
-            trafficCone.isStatic = true;
-            Composite.add(world, trafficCone);
 
-            const nameElement = document.createElement("span");
-            nameElement.textContent = name;
-            nameElement.className = 'userName';
-            document.body.appendChild(nameElement);
-
-            const coneObj = {
-                body: trafficCone,
-                stationaryTimer: null,
-                fadeInterval: null,
-                celebrated: false,
-                launchTimer: null,
-                hasLaunched: false,
-                nameElement,
-                isTopPlayer: isTopPlayer
-            };
-            trafficCones.push(coneObj);
-            positionNameLabel(coneObj)
-
-            position.occupied = true;
-            setTimeout(() => {
-                position.occupied = false;
-                processQueue();
-            }, position.cooldown);
-
-            coneObj.launchTimer = setTimeout(() => {
-                trafficCone.isStatic = false;
-                applyRandomUpwardForceAndSpin(trafficCone);
-                coneObj.hasLaunched = true;
-            }, position.launchDelay);
-        }
-
-        function processQueue() {
-            if (coneQueue.length === 0) return;
-            const nextConeName = coneQueue.shift();
-            addCone(nextConeName);
-        }
-
-        function applyRandomUpwardForceAndSpin(body) {
-            const forceMagnitude = 0.7 + Math.random() * 0.05;
-            const horizontalForce = (Math.random() - 0.5) * 0.1;
-            const spinDirection = Math.random() > 0.5 ? 1 : -1;
-            const angularVelocity = 0.2 + Math.random() * 0.8;
-
-            const force = { x: horizontalForce, y: -forceMagnitude };
-            Body.applyForce(body, body.position, force);
-            Body.setAngularVelocity(body, angularVelocity * spinDirection);
-        }
-
-        function checkConeStatus(coneObj) {
-            const { body, hasLaunched, nameElement } = coneObj;
-            if (!hasLaunched) return;
-
-            const isStationary = Math.abs(body.angularVelocity) < 0.05 &&
-                Math.abs(body.velocity.x) < 0.05 &&
-                Math.abs(body.velocity.y) < 0.05;
-
-            if (isStationary) {
-                if (!coneObj.stationaryTimer) {
-                    coneObj.stationaryTimer = setTimeout(() => {
-                        if (isConeUpright(body)) {
-                            if (!coneObj.celebrated) {
-                                coneObj.celebrated = true;
-                                coolSound.play();
-                                triggerConfetti(body.position);
-                                socket.emit('win', nameElement.textContent);
-                            }
-                        } else {
-                            if (!coneObj.celebrated) {
-                                coneObj.celebrated = true;
-                                failSound.play();
-                                socket.emit('fail', nameElement.textContent);
-                            }
+                setupGround() {
+                    this.ground = Bodies.rectangle(
+                        window.innerWidth / 2,
+                        window.innerHeight - 10,
+                        window.innerWidth,
+                        20,
+                        {
+                            isStatic: true,
+                            render: {
+                                fillStyle: 'transparent',
+                                strokeStyle: 'transparent',
+                            },
+                            collisionFilter: { group: -1 },
+                            friction: 1,
+                            frictionStatic: 1,
                         }
-                        startFadeOut(coneObj);
-                    }, 2000);
+                    );
+                    Composite.add(this.world, this.ground);
                 }
-            } else {
-                if (coneObj.stationaryTimer) {
-                    clearTimeout(coneObj.stationaryTimer);
-                    coneObj.stationaryTimer = null;
+
+
+                setupEvents() {
+
+                    this.socket.on('addCone', (name) => this.coneManager.addCone(name));
+                    this.socket.on('goldSkin', (data) => (this.currentTopPlayer = data));
+                    this.socket.on('newGoldCelebration', (name) => (goldAnimation(name)));
+
+                    this.socket.on('skinRefresh', () => this.updatePlayerSkins());
+
+
+                    Events.on(this.engine, 'afterUpdate', () => {
+                        this.coneManager.updateCones();
+                    });
+
+
+                    window.addEventListener('resize', () => this.onResize());
                 }
-                coneObj.celebrated = false;
-            }
-        }
 
-        function positionNameLabel(coneObj) {
-            coneObj.nameElement.style.top = `${coneObj.body.position.y - 150}px`;
-            coneObj.nameElement.style.left = `${coneObj.body.position.x - (coneObj.nameElement.offsetWidth / 2)}px`;
-        }
 
-        function isConeUpright(body) {
-            const angle = Math.abs((body.angle + Math.PI) % (2 * Math.PI) - Math.PI);
-            return angle < 0.1 || Math.abs(angle - Math.PI) < 0.1;
-        }
+                onResize() {
+                    const { render, ground } = this;
+                    render.canvas.width = window.innerWidth;
+                    render.canvas.height = window.innerHeight;
+                    Render.setPixelRatio(render, window.devicePixelRatio);
 
-        function startFadeOut(coneObj) {
-            const { body, nameElement } = coneObj;
-            let opacity = 1.0;
 
-            coneObj.fadeInterval = setInterval(() => {
-                opacity -= 0.01;
-                if (opacity <= 0) {
-                    opacity = 0;
-                    clearInterval(coneObj.fadeInterval);
-                    nameElement.remove();
-                    Composite.remove(world, body);
+                    Body.setPosition(ground, {
+                        x: window.innerWidth / 2,
+                        y: window.innerHeight - 10,
+                    });
+                    Body.setVertices(ground, [
+                        { x: 0, y: window.innerHeight - 10 },
+                        { x: window.innerWidth, y: window.innerHeight - 10 },
+                        { x: window.innerWidth, y: window.innerHeight + 10 },
+                        { x: 0, y: window.innerHeight + 10 },
+                    ]);
 
-                    const index = trafficCones.indexOf(coneObj);
-                    if (index > -1) {
-                        trafficCones.splice(index, 1);
+
+                    this.coneManager.updatePositions();
+                }
+
+
+                async updatePlayerSkins() {
+                    try {
+                        const response = await fetch('/api/skins/users');
+                        const data = await response.json();
+                        this.playerSkins = data.reduce((acc, { name, skin }) => {
+                            acc[name] = skin;
+                            return acc;
+                        }, {});
+                    } catch (error) {
+                        console.error('Error loading skins:', error);
                     }
                 }
-                body.render.opacity = opacity;
-                nameElement.style.opacity = opacity;
-            }, 10);
-        }
 
-        Events.on(engine, 'afterUpdate', () => {
-            trafficCones.forEach(coneObj => {
-                positionNameLabel(coneObj)
-                checkConeStatus(coneObj);
-            })
-        });
 
-        function triggerConfetti({ x, y }) {
-            const origin = {
-                x: x / window.innerWidth,
-                y: Math.max(0, Math.min(1, (y - 120) / window.innerHeight))
-            };
+                getPlayerSkin(name) {
+                    if (name === this.currentTopPlayer) {
+                        return this.coneManager.availableSkins.gold;
+                    }
+                    return this.playerSkins[name] || this.coneManager.availableSkins.default;
+                }
+            }
 
-            const defaults = { origin };
-            const variants = [
-                { spread: 26, startVelocity: 55, particleCount: 50 },
-                { spread: 60, particleCount: 40 },
-                { spread: 100, decay: 0.91, scalar: 0.8, particleCount: 70 },
-                { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2, particleCount: 20 },
-                { spread: 120, startVelocity: 45, particleCount: 20 }
-            ];
+            class ConeManager {
+                constructor(gameManager) {
+                    this.gameManager = gameManager;
+                    this.cones = [];
+                    this.coneQueue = [];
+                    this.positions = [
+                        { x: window.innerWidth / 2, occupied: false },
+                        { x: window.innerWidth / 4, occupied: false },
+                        { x: (3 * window.innerWidth) / 4, occupied: false },
+                    ];
 
-            variants.forEach(opts => confetti({ ...defaults, ...opts }));
-        }
+                    this.availableSkins = {
+                        default: 'skins/cone_default.png',
+                        gold: 'skins/cone_gold.png',
+                        glorp: 'skins/cone_glorp.png',
+                        casehardened: 'skins/cone_casehardened.png',
+                        inverted: 'skins/cone_inverted.png',
+                        negative: 'skins/cone_negative.png',
+                        fade: 'skins/cone_fade.png',
+                        tigertooth: 'skins/cone_tigertooth.png',
+                        comic: 'skins/cone_comic.png',
+                    };
+
+                    this.coneVertices = Vertices.fromPath(
+                        '0 124.0166 19.8556 124.0166 49.639 0 64.0794 0 94.4644 124.0166 116.1252 124.0166 116.1252 155.906 0 155.906'
+                    );
+                }
+
+                addCone(name) {
+                    const position = this.positions.find((pos) => !pos.occupied);
+                    if (!position) {
+                        this.coneQueue.push(name);
+                        return;
+                    }
+
+                    const texture =
+                        this.gameManager.getPlayerSkin(name) ||
+                        this.availableSkins.default;
+
+                    const cone = new Cone(
+                        name,
+                        position.x,
+                        texture,
+                        this.gameManager.engine,
+                        this.coneVertices,
+                        this.gameManager.world,
+                        this,
+                        this.gameManager);
+                    this.cones.push(cone);
+
+                    position.occupied = true;
+                    setTimeout(() => {
+                        position.occupied = false;
+                        this.processConeQueue();
+                    }, 5000);
+
+                    setTimeout(() => {
+                        cone.launch();
+                    }, 1000);
+                }
+
+                processConeQueue() {
+                    if (this.coneQueue.length === 0) return;
+                    const nextConeName = this.coneQueue.shift();
+                    this.addCone(nextConeName);
+                }
+
+                updateCones() {
+                    this.cones.forEach((cone) => {
+                        cone.update();
+                    });
+                }
+
+                updatePositions() {
+                    this.positions[0].x = window.innerWidth / 2;
+                    this.positions[1].x = window.innerWidth / 4;
+                    this.positions[2].x = (3 * window.innerWidth) / 4;
+                }
+
+                removeCone(cone) {
+                    const index = this.cones.indexOf(cone);
+                    if (index !== -1) {
+                        this.cones.splice(index, 1);
+                    }
+                }
+            }
+
+            class Cone {
+                constructor(name, positionX, texture, engine, coneVertices, world, coneManager, gameManager) {
+                    this.name = name;
+                    this.engine = engine;
+                    this.world = world;
+                    this.coneManager = coneManager;
+                    this.gameManager = gameManager;
+                    this.hasLaunched = false;
+                    this.celebrated = false;
+                    this.stationaryTimer = null;
+                    this.fadeInterval = null;
+
+                    this.body = Bodies.fromVertices(
+                        positionX,
+                        window.innerHeight - 85,
+                        [coneVertices],
+                        this.getBodyOptions(texture),
+                        true
+                    );
+                    Body.setStatic(this.body, true);
+                    Composite.add(this.world, this.body);
+
+                    this.nameElement = document.createElement('span');
+                    this.nameElement.textContent = name;
+                    this.nameElement.className = 'userName';
+                    document.body.appendChild(this.nameElement);
+
+                    this.updateNameLabelPosition();
+                }
+
+                getBodyOptions(texture) {
+                    return {
+                        restitution: 0.2,
+                        density: 0.001, friction: 0.5,
+                        frictionAir: 0.02,
+                        render: DEBUG_MODE
+                            ? {
+                                fillStyle: 'orange',
+                                strokeStyle: 'black',
+                                lineWidth: 1,
+                            }
+                            : {
+                                sprite: {
+                                    texture: texture,
+                                    xScale: 0.24, yScale: 0.24,
+                                },
+                                strokeStyle: 'black',
+                                lineWidth: 2,
+                                opacity: 1,
+                            },
+                    };
+                }
+
+                launch() {
+                    Body.setStatic(this.body, false);
+                    this.applyRandomUpwardForceAndSpin();
+                    this.hasLaunched = true;
+                }
+
+                applyRandomUpwardForceAndSpin() {
+                    const upwardForceMultiplier = 1.1; const forceMagnitude = upwardForceMultiplier + Math.random() * 0.05;
+                    const horizontalForce = (Math.random() - 0.5) * 0.1;
+                    const force = { x: horizontalForce, y: -forceMagnitude };
+                    Body.applyForce(this.body, this.body.position, force);
+
+                    const angularVelocity = 0.2 + Math.random() * 0.8;
+                    const spinDirection = Math.random() > 0.5 ? 1 : -1;
+                    Body.setAngularVelocity(this.body, angularVelocity * spinDirection);
+                }
+
+                update() {
+                    this.updateNameLabelPosition();
+                    this.handleStatus();
+                }
+
+                updateNameLabelPosition() {
+                    this.nameElement.style.top = `${this.body.position.y - 150}px`;
+                    this.nameElement.style.left = `${this.body.position.x - this.nameElement.offsetWidth / 2}px`;
+                }
+
+                isUpright() {
+                    const worldUpY = -Math.cos(this.body.angle);
+                    return Math.abs(worldUpY - -1) < 0.2;
+                }
+
+                startFadeOut() {
+                    let opacity = 1.0;
+                    this.fadeInterval = setInterval(() => {
+                        opacity -= 0.01;
+                        if (opacity <= 0) {
+                            opacity = 0;
+                            clearInterval(this.fadeInterval);
+                            this.nameElement.remove();
+                            Composite.remove(this.world, this.body);
+                            this.coneManager.removeCone(this);
+                        }
+                        this.body.render.opacity = opacity;
+                        this.nameElement.style.opacity = opacity;
+                    }, 10);
+                }
+
+                handleStatus() {
+                    if (!this.hasLaunched) return;
+
+                    const isStationary =
+                        Math.abs(this.body.angularVelocity) < 0.05 &&
+                        Math.abs(this.body.velocity.x) < 0.05 &&
+                        Math.abs(this.body.velocity.y) < 0.05;
+
+                    if (isStationary) {
+                        if (!this.stationaryTimer) {
+                            this.stationaryTimer = setTimeout(() => {
+                                if (this.isUpright()) {
+                                    if (!this.celebrated) {
+                                        this.celebrated = true;
+                                        document.getElementById('coolSound').play();
+                                        triggerConfetti(this.body.position);
+                                        this.gameManager.socket.emit('win', this.name);
+                                    }
+                                } else {
+                                    if (!this.celebrated) {
+                                        this.celebrated = true;
+                                        document.getElementById('failSound').play();
+                                        this.gameManager.socket.emit('fail', this.name);
+                                    }
+                                }
+                                this.startFadeOut();
+                            }, 2000);
+                        }
+                    } else {
+                        if (this.stationaryTimer) {
+                            clearTimeout(this.stationaryTimer);
+                            this.stationaryTimer = null;
+                        }
+                        this.celebrated = false;
+                    }
+                }
+            }
+
+
+            const triggerConfetti = (position) => {
+                const origin = {
+                    x: position.x / window.innerWidth,
+                    y: Math.max(0, Math.min(1, (position.y - 120) / window.innerHeight)),
+                };
+
+                const confettiSettings = [
+                    { spread: 26, startVelocity: 55, particleCount: 50 },
+                    { spread: 60, particleCount: 40 },
+                    { spread: 100, decay: 0.91, scalar: 0.8, particleCount: 70 },
+                    { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2, particleCount: 20 },
+                    { spread: 120, startVelocity: 45, particleCount: 20 },
+                ];
+
+                confettiSettings.forEach((opts) => confetti({ origin, ...opts }));
+            }
+
+            const goldAnimation = (name) => {
+
+                document.getElementById("newGold").play()
+                const container = document.getElementById("celebration-container");
+                const playerImage = document.getElementById("player-image");
+                const playerName = document.getElementById("player-name");
+                const audio = document.getElementById("newGold");
+
+
+                playerName.textContent = name;
+
+
+                container.classList.remove("hidden");
+
+
+                triggerConfetti({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+
+                setTimeout(() => {
+                    container.classList.add("fadeoutgold");
+                    setTimeout(() => {
+                        container.classList.remove("fadeoutgold");
+                        container.classList.add("hidden");
+
+                    }, 1000);
+
+                }, 4000);
+
+
+            }
+
+            const gameManager = new GameManager();
+
+
+
+        })();
+
+
+
+
     </script>
 </body>
 
