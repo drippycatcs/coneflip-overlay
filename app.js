@@ -8,6 +8,7 @@ const io = require('socket.io')(http);
 const CONFIG = {
     PORT: process.env.PORT || 3000,
     PATHS: {
+        DATA: path.join(__dirname, 'data'),
         LEADERBOARD: path.join(__dirname, 'data', 'leaderboard.json'),
         SKINS: path.join(__dirname, 'data', 'skins.json'),
         PUBLIC: path.join(__dirname, 'public')
@@ -91,6 +92,7 @@ class LeaderboardManager {
         try {
             await fs.access(CONFIG.PATHS.LEADERBOARD);
         } catch {
+            await fs.mkdir(CONFIG.PATHS.DATA, { recursive: true });
             await fs.writeFile(CONFIG.PATHS.LEADERBOARD, JSON.stringify([]), 'utf8');
         }
     }
@@ -153,6 +155,7 @@ class SkinsManager {
         try {
             await fs.access(CONFIG.PATHS.SKINS);
         } catch {
+            await fs.mkdir(CONFIG.PATHS.DATA, { recursive: true });
             await fs.writeFile(CONFIG.PATHS.SKINS, JSON.stringify([]), 'utf8');
         }
     }
