@@ -253,6 +253,7 @@ io.on('connection', async (socket) => {
         topPlayer = data[0]?.name || null;
         socket.emit('refreshLb', data);
         socket.emit('goldSkin', topPlayer);
+
         const updateStateHandler = async (playerName, isWin) => {
             try {
                 const result = await LeaderboardManager.updatePlayer(playerName, isWin);
