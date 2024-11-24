@@ -282,17 +282,11 @@
                         { x: (3 * window.innerWidth) / 4, occupied: false },
                     ];
 
-                    this.availableSkins = {
-                        default: 'skins/cone_default.png',
-                        gold: 'skins/cone_gold.png',
-                        glorp: 'skins/cone_glorp.png',
-                        casehardened: 'skins/cone_casehardened.png',
-                        inverted: 'skins/cone_inverted.png',
-                        negative: 'skins/cone_negative.png',
-                        fade: 'skins/cone_fade.png',
-                        tigertooth: 'skins/cone_tigertooth.png',
-                        comic: 'skins/cone_comic.png',
-                    };
+                    this.availableSkins = {};
+
+                    fetch('/api/skins/available')
+                        .then(response => response.json()
+                            .then(data => this.availableSkins = data))
 
                     const coneHitbox = document.querySelector('#hitbox')
                     this.coneVertices = Svg.pathToVertices(coneHitbox).map(v => ({ x: v.x * 0.24, y: v.y * 0.24 }));
