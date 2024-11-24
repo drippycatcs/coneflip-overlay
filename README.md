@@ -143,8 +143,19 @@ Returns the current leaderboard and the top player.
 
 
    ---
-# How to add skins.
-  *Coming soon*
+# How to add skins
+  1. Put the skin image into the `public/skins/` directory.
+  2. Add a new entry to the `public/skins/config.json` file:
+  ```json
+    {
+        "name": "[YOUR SKIN NAME]",
+        "visuals": "[YOUR SKIN IMAGE FILENAME]",
+        "canUnbox": true,
+        "unboxWeight": 0
+    }
+  ```
+  3. Change the values accordingly.
+      - If you don't want your skin being unboxed by viewers, set `canUnbox` value to `false` and remove the `unboxWeight` field.
 
 
   ---
