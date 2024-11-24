@@ -25,6 +25,19 @@ const CONFIG = {
     }
 };
 
+// Since "/Data" isn't being shipped to the Github the program wil crash if data isn't there so here i'm ensuring theres a /data folder.
+async function ensureDataFolder() {
+    const folderPath = path.dirname(CONFIG.PATHS.LEADERBOARD);
+    try {
+        await fs.mkdir(folderPath, { recursive: true });
+    } catch (error) {
+        console.error(`Error ensuring data folder:`, error);
+    }
+}
+
+
+ensureDataFolder();
+
 const errorHandler = (err, req, res, next) => {
     console.error('Error:', err);
     res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
