@@ -10,6 +10,12 @@ Created by:
 
  [Aquaismissing](https://x.com/aquaismissing)
 
+
+Feel free to make a  [pull request](https://github.com/drippycatcs/coneflip-overlay/pulls
+) and get your name added! 
+
+*Be clear about what you added or changed, how it should work, and try to implement it in existing classes or functions while following clean coding practices.*
+
 ---
 
 ## Installation
