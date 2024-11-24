@@ -93,7 +93,7 @@ Feel free to make a  [pull request](https://github.com/drippycatcs/coneflip-over
         ---
 
         ##  Apply Random Skin
-        http://localhost:3000/api/leaderboard?show=true
+        http://localhost:3000/api/skins/set?name=%username%&random=true
 
         ---
 
@@ -159,7 +159,7 @@ Returns the current leaderboard and the top player.
 
 
   ---
-# Skin list 
+# Built-in skins (list)
 
 ```json
 {
@@ -173,5 +173,4 @@ Returns the current leaderboard and the top player.
     "tigertooth": "skins/cone_tigertooth.png",
     "comic": "skins/cone_comic.png"
 }
-
 ```
