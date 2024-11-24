@@ -1,0 +1,60 @@
+[
+    {
+        "name": "default",
+        "visuals": "cone_default.png",
+        "canUnbox": false
+    },
+    {
+        "name": "gold",
+        "visuals": "cone_gold.png",
+        "canUnbox": false
+    },
+    {
+        "name": "glorp",
+        "visuals": "cone_glorp.png",
+        "canUnbox": true,
+        "unboxWeight": 40
+    },
+    {
+        "name": "inverted",
+        "visuals": "cone_inverted.png",
+        "canUnbox": true,
+        "unboxWeight": 40
+    },
+    {
+        "name": "negative",
+        "visuals": "cone_negative.png",
+        "canUnbox": true,
+        "unboxWeight": 20
+    },
+    {
+        "name": "comic",
+        "visuals": "cone_comic.png",
+        "canUnbox": true,
+        "unboxWeight": 20
+    },
+    {
+        "name": "tigertooth",
+        "visuals": "cone_tigertooth.png",
+        "canUnbox": true,
+        "unboxWeight": 10
+    },
+    {
+        "name": "casehardened",
+        "visuals": "cone_casehardened.png",
+        "canUnbox": true,
+        "unboxWeight": 10
+    },
+    {
+        "name": "ahegao",
+        "visuals": "cone_ahegao.png",
+        "canUnbox": true,
+        "unboxWeight": 3
+    },
+    {
+        "name": "fade",
+        "visuals": "cone_fade.png",
+        "canUnbox": true,
+        "unboxWeight": 3
+    }
+]

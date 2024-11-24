@@ -93,7 +93,7 @@ Feel free to make a  [pull request](https://github.com/drippycatcs/coneflip-over
         ---
 
         ##  Apply Random Skin
-        http://localhost:3000/api/leaderboard?show=true
+        http://localhost:3000/api/skins/set?name=%username%&random=true
 
         ---
 
@@ -143,12 +143,23 @@ Returns the current leaderboard and the top player.
 
 
    ---
-# How to add skins.
-  *Coming soon*
+# How to add skins
+  1. Put the skin image into the `public/skins/` directory.
+  2. Add a new entry to the `public/skins/config.json` file:
+  ```json
+    {
+        "name": "[YOUR SKIN NAME]",
+        "visuals": "[YOUR SKIN IMAGE FILENAME]",
+        "canUnbox": true,
+        "unboxWeight": 0
+    }
+  ```
+  3. Change the values accordingly.
+      - If you don't want your skin being unboxed by viewers, set `canUnbox` value to `false` and remove the `unboxWeight` field.
 
 
   ---
-# Skin list 
+# Built-in skins (list)
 
 ```json
 {
@@ -162,5 +173,4 @@ Returns the current leaderboard and the top player.
     "tigertooth": "skins/cone_tigertooth.png",
     "comic": "skins/cone_comic.png"
 }
-
 ```
