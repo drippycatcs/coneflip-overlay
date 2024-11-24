@@ -5,24 +5,29 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 
+
+/**
+ * @typedef {{name: string, visuals: string, canUnbox: boolean, unboxWeight?: number}} Skin
+ */
+
+/**
+ * `canUnbox === true`
+ * 
+ * `unboxWeight !== undefined`
+ * @typedef {{name: string, visuals: string, canUnbox: boolean, unboxWeight: number}} AvailableToUnboxSkin
+ */
+
+
 const CONFIG = {
     PORT: process.env.PORT || 3000,
     PATHS: {
+        DATA: path.join(__dirname, 'data'),
         LEADERBOARD: path.join(__dirname, 'data', 'leaderboard.json'),
-        SKINS: path.join(__dirname, 'data', 'skins.json'),
-        PUBLIC: path.join(__dirname, 'public')
+        SKINS_DATA: path.join(__dirname, 'data', 'skins.json'),
+        PUBLIC: path.join(__dirname, 'public'),
+        SKINS_CONFIG: path.join(__dirname, 'public', 'skins', 'config.json'),
     },
     CACHE_DURATION: 5000,
-    SKINS: {
-        glorp: { weight: 40 },
-        inverted: { weight: 40 },
-        negative: { weight: 20 },
-        comic: { weight: 20 },
-        tigertooth: { weight: 10 },
-        casehardened: { weight: 10 },
-        ahegao: { weight: 3 },
-        fade: { weight: 3 },
-    }
 };
 
 // Since "/Data" isn't being shipped to the Github the program wil crash if data isn't there so here i'm ensuring theres a /data folder.
@@ -90,13 +95,9 @@ app.get('/api/leaderboard/:name', async (req, res, next) => {
 });
 
 app.get('/api/skins/available', async (req, res) => {
-    let availableSkins = {}
-
-    let files = await fs.readdir(`${process.cwd()}/public/skins`)
-
-    files.forEach(file => {
-        if (file.endsWith('.png') && file.startsWith('cone_'))
-            availableSkins[file.substring(5, file.length -4)] = `/skins/${file}`;
+    const availableSkins = {};
+    Object.values(SkinsManager.availableSkins).forEach((skin) => {
+        availableSkins[skin.name] = `/skins/${skin.visuals}`;
     })
 
     res.send(availableSkins)
@@ -212,17 +213,34 @@ class LeaderboardManager {
 }
 
 class SkinsManager {
+    /**
+     *  @type {Object.<string, Skin>}
+     */ 
+    static availableSkins = {};
+
     static async initialize() {
         try {
-            await fs.access(CONFIG.PATHS.SKINS);
+            await fs.access(CONFIG.PATHS.SKINS_DATA);
         } catch {
-            await fs.mkdir(path.dirname(CONFIG.PATHS.SKINS), { recursive: true });
-            await fs.writeFile(CONFIG.PATHS.SKINS, JSON.stringify([]), 'utf8');
+            await fs.mkdir(path.dirname(CONFIG.PATHS.SKINS_DATA), { recursive: true });
+            await fs.writeFile(CONFIG.PATHS.SKINS_DATA, JSON.stringify([]), 'utf8');
         }
+        this.availableSkins = await this.loadConfiguredSkins();
+    }
+
+    static async loadConfiguredSkins() {
+        const data = await fs.readFile(CONFIG.PATHS.SKINS_CONFIG);
+        const skinsConfig = JSON.parse(data);
+        
+        const skins = {};
+        skinsConfig.forEach((skin) => {
+            skins[skin.name] = skin;
+        });
+        return skins;
     }
 
     static async getUserSkins() {
-        const data = await fs.readFile(CONFIG.PATHS.SKINS, 'utf8');
+        const data = await fs.readFile(CONFIG.PATHS.SKINS_DATA, 'utf8');
         return JSON.parse(data);
     }
 
@@ -240,34 +258,43 @@ class SkinsManager {
             data[playerIndex].skin = skin;
         }
 
-        await fs.writeFile(CONFIG.PATHS.SKINS, JSON.stringify(data, null, 2), 'utf8');
+        await fs.writeFile(CONFIG.PATHS.SKINS_DATA, JSON.stringify(data, null, 2), 'utf8');
         return `Skin for ${name} updated to ${skin}`;
     }
 
     static async setRandomSkin(name) {
-        const totalWeight = Object.values(CONFIG.SKINS).reduce((sum, skin) => sum + skin.weight, 0);
+        const skinsAvailableToUnbox = this.getSkinsAvailableToUnbox();
+        const totalWeight = skinsAvailableToUnbox.reduce((sum, skin) => sum + skin.unboxWeight, 0);
         let currentWeight = 0;
         const random = Math.random() * totalWeight;
 
-        for (const [skin, data] of Object.entries(CONFIG.SKINS)) {
-            currentWeight += data.weight;
+        for (const skin of skinsAvailableToUnbox) {
+            currentWeight += skin.unboxWeight;
             if (random <= currentWeight) {
-                await this.setSkin(name, skin);
-                const odds = (data.weight / totalWeight * 100).toFixed(1);
-                return `you received ${skin} (${odds}%)`;
+                await this.setSkin(name, skin.name);
+                const odds = (skin.unboxWeight / totalWeight * 100).toFixed(1);
+                return `you received ${skin.name} (${odds}%)`;
             }
         }
     }
 
     static calculateSkinOdds() {
-        const totalWeight = Object.values(CONFIG.SKINS).reduce((sum, skin) => sum + skin.weight, 0);
-        return Object.entries(CONFIG.SKINS)
-            .map(([skin, data]) => `${skin} (${(data.weight / totalWeight * 100).toFixed(1)}%)`)
+        const skinsAvailableToUnbox = this.getSkinsAvailableToUnbox();
+        const totalWeight = skinsAvailableToUnbox.reduce((sum, skin) => sum + skin.unboxWeight, 0);
+        return skinsAvailableToUnbox
+            .map((skin) => `${skin.name} (${(skin.unboxWeight / totalWeight * 100).toFixed(1)}%)`)
             .join(', ');
     }
 
-    static isValidSkin(skin) {
-        return skin in CONFIG.SKINS;
+    /**
+     * @return {[AvailableToUnboxSkin]}
+     */
+    static getSkinsAvailableToUnbox() {
+        return Object.values(this.availableSkins).filter((skin) => skin.canUnbox);
+    }
+
+    static isValidSkin(name) {
+        return name in this.availableSkins;
     }
 }
 
