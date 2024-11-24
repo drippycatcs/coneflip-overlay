@@ -89,6 +89,19 @@ app.get('/api/leaderboard/:name', async (req, res, next) => {
     }
 });
 
+app.get('/api/skins/available', async (req, res) => {
+    let availableSkins = {}
+
+    let files = await fs.readdir(`${process.cwd()}/public/skins`)
+
+    files.forEach(file => {
+        if (file.endsWith('.png') && file.startsWith('cone_'))
+            availableSkins[file.substring(5, file.length -4)] = `/skins/${file}`;
+    })
+
+    res.send(availableSkins)
+})
+
 app.get('/api/skins/set', async (req, res, next) => {
     const name = req.query.name?.toLowerCase().trim() || '';
     const skin = req.query.skin?.toLowerCase().trim() || '';
