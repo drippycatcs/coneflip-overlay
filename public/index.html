@@ -34,7 +34,6 @@
             border-radius: 6px;
         }
 
-
         #celebration-container {
             display: block;
             position: fixed;
@@ -44,7 +43,6 @@
             text-align: center;
             z-index: 10;
             animation: fade-in 1s ease-in-out forwards;
-
         }
 
         .fadeoutgold {
@@ -60,11 +58,8 @@
         }
 
         #player-details img {
-
             height: 150px;
-
             margin-bottom: 20px;
-
         }
 
         #player-details h1 {
@@ -86,16 +81,13 @@
             }
         }
 
-
         @keyframes fade-out-gold {
             from {
                 opacity: 1;
-
             }
 
             to {
                 opacity: 0;
-
             }
         }
     </style>
@@ -107,7 +99,7 @@
     <div id="celebration-container" class="hidden">
         <div id="player-details">
             <img id="player-image" src="skins/cone_gold.png">
-            <h1 id="player-name">zfqzfqf</h1>
+            <h1 id="player-name"></h1>
         </div>
     </div>
     <canvas id="world"></canvas>
@@ -134,6 +126,8 @@
         (() => {
 
             const DEBUG_MODE = false;
+
+            const slowOdds = 20; // aka 1 in 20
             const {
                 Engine,
                 Render,
@@ -169,6 +163,8 @@
                     this.coneManager = new ConeManager(this);
                     this.currentTopPlayer = null;
                     this.playerSkins = {};
+
+                    this.isSlowMotion = false; 
 
                     this.setupGround();
                     this.setupEvents();
@@ -257,6 +253,21 @@
                         return this.coneManager.availableSkins.gold;
                     }
                     return this.coneManager.availableSkins[this.playerSkins[name]] || this.coneManager.availableSkins.default;
+                }
+
+                
+                triggerSlowMotion() {
+                    if (this.isSlowMotion) return; 
+                    this.isSlowMotion = true;
+                    this.engine.timing.timeScale = 0.2; 
+                    console.log('Slow motion triggered!');
+
+                    
+                    setTimeout(() => {
+                        this.engine.timing.timeScale = 1;
+                        this.isSlowMotion = false;
+                        console.log('Slow motion ended.');
+                    }, 3500); 
                 }
             }
 
@@ -379,7 +390,8 @@
                 getBodyOptions(texture) {
                     return {
                         restitution: 0.2,
-                        density: 0.001, friction: 0.5,
+                        density: 0.001,
+                        friction: 0.5,
                         frictionAir: 0.02,
                         render: DEBUG_MODE
                             ? {
@@ -390,7 +402,8 @@
                             : {
                                 sprite: {
                                     texture: texture,
-                                    xScale: 0.24, yScale: 0.24,
+                                    xScale: 0.24,
+                                    yScale: 0.24,
                                 },
                                 strokeStyle: 'black',
                                 lineWidth: 2,
@@ -403,10 +416,19 @@
                     Body.setStatic(this.body, false);
                     this.applyRandomUpwardForceAndSpin();
                     this.hasLaunched = true;
+
+                    
+                    setTimeout(() => {
+                                        
+                        if (Math.random() < 1 / slowOdds) {
+                            this.gameManager.triggerSlowMotion();
+                        }
+                    }, 500); 
                 }
 
                 applyRandomUpwardForceAndSpin() {
-                    const upwardForceMultiplier = 1.1; const forceMagnitude = upwardForceMultiplier + Math.random() * 0.05;
+                    const upwardForceMultiplier = 1.1;
+                    const forceMagnitude = upwardForceMultiplier + Math.random() * 0.05;
                     const horizontalForce = (Math.random() - 0.5) * 0.1;
                     const force = { x: horizontalForce, y: -forceMagnitude };
                     Body.applyForce(this.body, this.body.position, force);
@@ -419,6 +441,7 @@
                 update() {
                     this.updateNameLabelPosition();
                     this.handleStatus();
+                    this.checkOffScreen(); 
                 }
 
                 updateNameLabelPosition() {
@@ -481,6 +504,41 @@
                             this.stationaryTimer = null;
                         }
                         this.celebrated = false;
+                    }
+                }
+
+                
+                checkOffScreen() {
+                    const buffer = 100; 
+                    if (
+                        this.body.position.y > window.innerHeight + buffer ||
+                        this.body.position.x < -buffer ||
+                        this.body.position.x > window.innerWidth + buffer
+                    ) {
+                        this.remove();
+                        console.log("Killed yeeted cone.")
+                    }
+                }
+
+                
+                remove() {
+                    
+                    this.nameElement.remove();
+
+                    
+                    Composite.remove(this.world, this.body);
+
+                    
+                    this.coneManager.removeCone(this);
+
+                    
+                    if (this.stationaryTimer) {
+                        clearTimeout(this.stationaryTimer);
+                        this.stationaryTimer = null;
+                    }
+                    if (this.fadeInterval) {
+                        clearInterval(this.fadeInterval);
+                        this.fadeInterval = null;
                     }
                 }
             }
