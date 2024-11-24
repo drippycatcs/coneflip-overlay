@@ -81,6 +81,7 @@ Feel free to make a  [pull request](https://github.com/drippycatcs/coneflip-over
 
 
   5. Create steam reward endpoint connections:
+      	*⚠ With local Twitch integration software*
         ## Add Cone
         http://localhost:3000/api/cones/add?name=%username%
 
@@ -103,7 +104,7 @@ Feel free to make a  [pull request](https://github.com/drippycatcs/coneflip-over
 
         ---
   
-  6. Enjoy!
+  7. Enjoy!
     
     
 
