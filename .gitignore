@@ -131,3 +131,4 @@ dist
 
 data/leaderboard.json
 data/skins.json
+.DS_Store
