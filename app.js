@@ -66,6 +66,33 @@ app.get('/api/cones/add', (req, res) => {
     res.sendStatus(200);
 });
 
+app.get('/api/average', async (req, res, next) => {
+    try {
+        const leaderboard = await LeaderboardManager.getLeaderboard();
+
+        const { totalWinRate, playerCount, totalGamesPlayed } = leaderboard.reduce(
+            (accumulator, { wins, fails }) => {
+                const totalGames = wins + fails;
+                if (totalGames > 0) {
+                    const winrate = (wins / totalGames) * 100;
+                    accumulator.totalWinRate += winrate;
+                    accumulator.totalGamesPlayed += totalGames;
+                    accumulator.playerCount += 1;
+                }
+                return accumulator;
+            },
+            { totalWinRate: 0, totalGamesPlayed: 0, playerCount: 0 }
+        );
+
+        const averageWinRate = playerCount > 0 ? (totalWinRate / playerCount).toFixed(2) : '0.00';
+
+        res.json({ averageWinRate, totalGamesPlayed, playerCount });
+    } catch (err) {
+        next(err);
+    }
+});
+
+
 app.get('/api/leaderboard', async (req, res, next) => {
     try {
         if (req.query.show === 'true') {
