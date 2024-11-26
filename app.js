@@ -79,7 +79,7 @@ app.get('/api/leaderboard', async (req, res, next) => {
 
 app.get('/api/leaderboard/average', async (req, res, next) => {
     try {
-        const data = await LeaderboardManager.calculateLbAVG();
+        const data = await LeaderboardManager.calculateLbStats();
         res.send(`${data.totalGamesPlayed} cones have been redeemed by ${data.playerCount} players with an average winrate of ${data.averageWinRate}%!`);
     } catch (err) {
         next(err);
@@ -187,7 +187,7 @@ class LeaderboardManager {
         });
     }
 
-    static async calculateLbAVG() {
+    static async calculateLbStats() {
         const data = await LeaderboardManager.getLeaderboard();
 
         const { totalWinRate, playerCount, totalGamesPlayed } = data.reduce(
