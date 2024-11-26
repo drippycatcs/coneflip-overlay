@@ -56,5 +56,11 @@
         "visuals": "cone_fade.png",
         "canUnbox": true,
         "unboxWeight": 3
+    },
+    {
+        "name": "printstream",
+        "visuals": "cone_printstream.png",
+        "canUnbox": true,
+        "unboxWeight": 3
     }
 ]
