@@ -135,8 +135,12 @@ app.get('/api/skins/users', async (req, res, next) => {
     }
 });
 
-app.get('/api/skins/odds', (req, res) => {
-    res.send(SkinsManager.calculateSkinOdds());
+app.get('/api/skins/odds', (req, res, next) => {
+    try {
+        res.send(SkinsManager.calculateSkinOdds());
+    } catch (err) {
+        next(err);
+    }
 });
 
 class LeaderboardManager {
