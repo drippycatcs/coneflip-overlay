@@ -4,6 +4,9 @@
 <head>
     <meta charset="viewport" content="width=device-width, initial-scale=1.0">
     <title>ConeFlip</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <style>
         body {
             margin: 0;
@@ -145,7 +148,7 @@
                     this.socket = io();
                     this.engine = Engine.create();
                     this.world = this.engine.world;
-                    this.world.gravity.y = 1.0;
+                    this.world.gravity.y = 1.3;
                     this.render = Render.create({
                         canvas: document.getElementById('world'),
                         engine: this.engine,
@@ -383,8 +386,8 @@
 
                 getBodyOptions(texture) {
                     return {
-                        restitution: 0.2,
-                        density: 0.001,
+                        restitution: 0.55,
+                        density: 0.01,
                         friction: 0.1,
                         frictionAir: 0.02,
                         render: DEBUG_MODE
@@ -421,7 +424,7 @@
                 }
 
                 applyRandomUpwardForceAndSpin() {
-                    const upwardForceMultiplier = 1.1;
+                    const upwardForceMultiplier = 14;
                     const forceMagnitude = upwardForceMultiplier + Math.random() * 0.05;
                     const horizontalForce = (Math.random() - 0.5) * 0.1;
                     const force = { x: horizontalForce, y: -forceMagnitude };

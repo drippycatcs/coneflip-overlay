@@ -40,6 +40,10 @@ app.use(express.static(CONFIG.PATHS.PUBLIC));
 app.use(errorHandler);
 
 app.get('/', (req, res) => {
+    /// Just to be sure
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(CONFIG.PATHS.PUBLIC, 'index.html'));
 });
 
