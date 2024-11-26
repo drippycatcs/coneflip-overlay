@@ -55,19 +55,23 @@ app.get('/api/cones/add', (req, res) => {
 });
 
 app.get('/api/leaderboard', async (req, res, next) => {
-    try {
-        const name = req.query.name?.toLowerCase().trim() || '';
-        const show = req.query.show === 'true';
+    const name = req.query.name?.toLowerCase().trim() || '';
+    const show = req.query.show === 'true';
 
+    try {
         if (show) {
             io.emit('showLb');
             return res.sendStatus(200);
         }
 
         if (name) {
+            let result;
             const data = await LeaderboardManager.getPlayer(name);
-            if (data.hasPlayed) return res.send(`${name}'s coneflip rank: ${data.rank} (Ws: ${data.wins} / Ls: ${data.fails} / WR%: ${data.winrate})`)
-            else return res.send(`${name} never tried coneflipping.`);
+            if (data.hasPlayed)
+                result = `${name} cone stats: ${data.rank} (Ws: ${data.wins} / Ls: ${data.fails} / WR%: ${data.winrate})`;
+            else
+                result = `${name} never tried coneflipping.`;
+            return res.send(result);
         }
 
         const data = await LeaderboardManager.getLeaderboard();
