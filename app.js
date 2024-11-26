@@ -22,26 +22,14 @@ const CONFIG = {
     PORT: process.env.PORT || 3000,
     PATHS: {
         DATA: path.join(__dirname, 'data'),
-        LEADERBOARD: path.join(__dirname, 'data', 'leaderboard.json'),
-        SKINS_DATA: path.join(__dirname, 'data', 'skins.json'),
         PUBLIC: path.join(__dirname, 'public'),
+        LEADERBOARD: path.join(__dirname, 'data', 'leaderboard.json'),
         SKINS_CONFIG: path.join(__dirname, 'public', 'skins', 'config.json'),
+        SKINS_DATA: path.join(__dirname, 'data', 'skins.json'),
     },
     CACHE_DURATION: 5000,
 };
 
-// Since "/Data" isn't being shipped to the Github the program wil crash if data isn't there so here i'm ensuring theres a /data folder.
-async function ensureDataFolder() {
-    const folderPath = path.dirname(CONFIG.PATHS.LEADERBOARD);
-    try {
-        await fs.mkdir(folderPath, { recursive: true });
-    } catch (error) {
-        console.error(`Error ensuring data folder:`, error);
-    }
-}
-
-
-ensureDataFolder();
 
 const errorHandler = (err, req, res, next) => {
     console.error('Error:', err);
@@ -66,39 +54,22 @@ app.get('/api/cones/add', (req, res) => {
     res.sendStatus(200);
 });
 
-app.get('/api/average', async (req, res, next) => {
-    try {
-        const leaderboard = await LeaderboardManager.getLeaderboard();
-
-        const { totalWinRate, playerCount, totalGamesPlayed } = leaderboard.reduce(
-            (accumulator, { wins, fails }) => {
-                const totalGames = wins + fails;
-                if (totalGames > 0) {
-                    const winrate = (wins / totalGames) * 100;
-                    accumulator.totalWinRate += winrate;
-                    accumulator.totalGamesPlayed += totalGames;
-                    accumulator.playerCount += 1;
-                }
-                return accumulator;
-            },
-            { totalWinRate: 0, totalGamesPlayed: 0, playerCount: 0 }
-        );
-
-        const averageWinRate = playerCount > 0 ? (totalWinRate / playerCount).toFixed(2) : '0.00';
-
-        res.json({ averageWinRate, totalGamesPlayed, playerCount });
-    } catch (err) {
-        next(err);
-    }
-});
-
-
 app.get('/api/leaderboard', async (req, res, next) => {
     try {
-        if (req.query.show === 'true') {
+        const name = req.query.name?.toLowerCase().trim() || '';
+        const show = req.query.show === 'true';
+
+        if (show) {
             io.emit('showLb');
             return res.sendStatus(200);
         }
+
+        if (name) {
+            const data = await LeaderboardManager.getPlayer(name);
+            if (data.hasPlayed) return res.send(`${name}'s coneflip rank: ${data.rank} (Ws: ${data.wins} / Ls: ${data.fails} / WR%: ${data.winrate})`)
+            else return res.send(`${name} never tried coneflipping.`);
+        }
+
         const data = await LeaderboardManager.getLeaderboard();
         res.json(data);
     } catch (err) {
@@ -106,28 +77,26 @@ app.get('/api/leaderboard', async (req, res, next) => {
     }
 });
 
-app.get('/api/leaderboard/:name', async (req, res, next) => {
+app.get('/api/leaderboard/average', async (req, res, next) => {
     try {
-        const name = req.params.name?.toLowerCase().trim() || '';
-        const data = await LeaderboardManager.getLeaderboard();
-        const index = data.findIndex((r) => r.name === name);
-
-        if (index === -1) return res.send('did no coneflips.');
-
-        const player = data[index];
-        res.send(`coneflip rank: ${index + 1}/${data.length} (Ws: ${player.wins} / Ls: ${player.fails} / WR%: ${player.winrate})`);
+        const data = await LeaderboardManager.calculateLbAVG();
+        res.send(`${data.totalGamesPlayed} cones have been redeemed by ${data.playerCount} players with an average winrate of ${data.averageWinRate}%!`);
     } catch (err) {
         next(err);
     }
 });
 
-app.get('/api/skins/available', async (req, res) => {
-    const availableSkins = {};
-    Object.values(SkinsManager.availableSkins).forEach((skin) => {
-        availableSkins[skin.name] = `/skins/${skin.visuals}`;
-    })
+app.get('/api/skins/available', async (req, res, next) => {
+    try {
+        const availableSkins = {};
+        Object.values(SkinsManager.availableSkins).forEach((skin) => {
+            availableSkins[skin.name] = `/skins/${skin.visuals}`;
+        })
 
-    res.send(availableSkins)
+        res.send(availableSkins)
+    } catch (err) {
+        next(err);
+    }
 })
 
 app.get('/api/skins/set', async (req, res, next) => {
@@ -209,26 +178,6 @@ class LeaderboardManager {
         return this.cache.data;
     }
 
-    static async updatePlayer(playerName, isWin) {
-        const data = await this.getLeaderboard();
-        const player = data.find(entry => entry.name === playerName);
-
-        if (player) {
-            if (isWin) player.wins++;
-            else player.fails++;
-            player.winrate = ((player.wins / (player.wins + player.fails)) * 100).toFixed(2);
-        } else {
-            data.push({
-                name: playerName,
-                wins: isWin ? 1 : 0,
-                fails: isWin ? 0 : 1,
-                winrate: isWin ? '100.00' : '0.00'
-            });
-        }
-
-        return this.updateLeaderboard(data);
-    }
-
     static sortLeaderboard(data) {
         return [...data].sort((a, b) => {
             if (b.wins !== a.wins) return b.wins - a.wins; // We sort by descending wins
@@ -237,12 +186,65 @@ class LeaderboardManager {
             return a.name.localeCompare(b.name); // Finally we do alphabetical
         });
     }
+
+    static async calculateLbAVG() {
+        const data = await LeaderboardManager.getLeaderboard();
+
+        const { totalWinRate, playerCount, totalGamesPlayed } = data.reduce(
+            (accumulator, { wins, fails }) => {
+                const totalGames = wins + fails;
+                if (totalGames > 0) {
+                    const winrate = (wins / totalGames) * 100;
+                    accumulator.totalWinRate += winrate;
+                    accumulator.totalGamesPlayed += totalGames;
+                    accumulator.playerCount += 1;
+                }
+                return accumulator;
+            },
+            { totalWinRate: 0, totalGamesPlayed: 0, playerCount: 0 }
+        );
+
+        const averageWinRate = playerCount > 0 ? (totalWinRate / playerCount).toFixed(2) : '0.00';
+
+        return { averageWinRate, totalGamesPlayed, playerCount };
+    }
+
+    static async getPlayer(name) {
+        const data = await LeaderboardManager.getLeaderboard();
+        const index = data.findIndex((r) => r.name === name);
+        if (index === -1) return { hasPlayed: false };
+
+        const player = data[index];
+        const rank = `${index + 1}/${data.length}`;
+
+        return { hasPlayed: true, rank: rank, wins: player.wins, fails: player.fails, winrate: player.winrate };
+    }
+
+    static async updatePlayer(name, isWin) {
+        const data = await this.getLeaderboard();
+        const player = data.find(entry => entry.name === name);
+
+        if (player) {
+            if (isWin) player.wins++;
+            else player.fails++;
+            player.winrate = ((player.wins / (player.wins + player.fails)) * 100).toFixed(2);
+        } else {
+            data.push({
+                name: name,
+                wins: isWin ? 1 : 0,
+                fails: isWin ? 0 : 1,
+                winrate: isWin ? '100.00' : '0.00'
+            });
+        }
+
+        return this.updateLeaderboard(data);
+    }
 }
 
 class SkinsManager {
     /**
      *  @type {Object.<string, Skin>}
-     */ 
+     */
     static availableSkins = {};
 
     static async initialize() {
@@ -258,7 +260,7 @@ class SkinsManager {
     static async loadConfiguredSkins() {
         const data = await fs.readFile(CONFIG.PATHS.SKINS_CONFIG);
         const skinsConfig = JSON.parse(data);
-        
+
         const skins = {};
         skinsConfig.forEach((skin) => {
             skins[skin.name] = skin;
@@ -286,7 +288,7 @@ class SkinsManager {
         }
 
         await fs.writeFile(CONFIG.PATHS.SKINS_DATA, JSON.stringify(data, null, 2), 'utf8');
-        return `Skin for ${name} updated to ${skin}`;
+        return `Skin for ${name} updated to ${skin}.`;
     }
 
     static async setRandomSkin(name) {
@@ -300,7 +302,7 @@ class SkinsManager {
             if (random <= currentWeight) {
                 await this.setSkin(name, skin.name);
                 const odds = (skin.unboxWeight / totalWeight * 100).toFixed(1);
-                return `you received ${skin.name} (${odds}%)`;
+                return `${name} unboxed "${skin.name}" skin (${odds}%).`;
             }
         }
     }
@@ -334,9 +336,9 @@ io.on('connection', async (socket) => {
         socket.emit('refreshLb', data);
         socket.emit('goldSkin', topPlayer);
 
-        const updateStateHandler = async (playerName, isWin) => {
+        const updateStateHandler = async (name, isWin) => {
             try {
-                const result = await LeaderboardManager.updatePlayer(playerName, isWin);
+                const result = await LeaderboardManager.updatePlayer(name, isWin);
                 const newTopPlayer = result[0]?.name;
 
                 if (newTopPlayer !== topPlayer) {
@@ -351,8 +353,8 @@ io.on('connection', async (socket) => {
             }
         };
 
-        socket.on('win', (playerName) => updateStateHandler(playerName, true));
-        socket.on('fail', (playerName) => updateStateHandler(playerName, false));
+        socket.on('win', (name) => updateStateHandler(name, true));
+        socket.on('fail', (name) => updateStateHandler(name, false));
     } catch (err) {
         console.error('Socket connection error:', err);
     }
