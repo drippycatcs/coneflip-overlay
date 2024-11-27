@@ -200,7 +200,7 @@ class LeaderboardManager {
     }
 
     static async calculateLbStats() {
-        const data = await LeaderboardManager.getLeaderboard();
+        const data = await this.getLeaderboard();
 
         const { totalWinRate, playerCount, totalGamesPlayed } = data.reduce(
             (accumulator, { wins, fails }) => {
@@ -222,7 +222,7 @@ class LeaderboardManager {
     }
 
     static async getPlayer(name) {
-        const data = await LeaderboardManager.getLeaderboard();
+        const data = await this.getLeaderboard();
         const index = data.findIndex((r) => r.name === name);
         if (index === -1) return { hasPlayed: false };
 
