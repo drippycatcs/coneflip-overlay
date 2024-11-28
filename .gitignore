@@ -131,4 +131,7 @@ dist
 
 data/leaderboard.json
 data/skins.json
+data/leaderboard.db
+data/skins.db
 .DS_Store
+sqlite browser
