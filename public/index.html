@@ -97,6 +97,8 @@
 
         .cone {
             position: absolute;
+            height: 160px;
+            width: 120px;
             will-change: transform, top, left;
             transition: opacity 0.5s ease;
             z-index: 1;
@@ -386,11 +388,6 @@
                         this.element = document.createElement('img');
                         this.element.src = texture;
                         this.element.className = 'cone';
-                        this.element.style.position = 'absolute';
-                        this.element.style.width = '120px';
-                        this.element.style.height = '160px';
-                        this.element.style.transition = 'opacity 0.5s';
-                        this.element.style.opacity = '1';
                         document.body.appendChild(this.element);
 
                         this.nameElement = document.createElement('span');
