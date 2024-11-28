@@ -382,27 +382,24 @@
                     Matter.Body.setStatic(this.body, true);
                     Matter.Composite.add(this.world, this.body);
 
-                    if (!DEBUG_MODE) {
-                        this.element = document.createElement('img');
-                        this.element.src = texture;
-                        this.element.className = 'cone';
-                        this.element.style.position = 'absolute';
-                        this.element.style.width = '120px';
-                        this.element.style.height = '160px';
-                        this.element.style.transition = 'opacity 0.5s';
-                        this.element.style.opacity = '1';
-                        document.body.appendChild(this.element);
 
-                        this.nameElement = document.createElement('span');
-                        this.nameElement.textContent = name;
-                        this.nameElement.className = 'userName';
-                        document.body.appendChild(this.nameElement);
+                    this.element = document.createElement('img');
+                    this.element.src = texture;
+                    this.element.className = 'cone';
+                    this.element.style.position = 'absolute';
+                    this.element.style.width = '120px';
+                    this.element.style.height = '160px';
+                    this.element.style.transition = 'opacity 0.5s';
+                    this.element.style.opacity = '1';
+                    document.body.appendChild(this.element);
 
-                        this.updateNameLabelPosition();
-                    } else {
-                        this.element = null;
-                        this.nameElement = null;
-                    }
+                    this.nameElement = document.createElement('span');
+                    this.nameElement.textContent = name;
+                    this.nameElement.className = 'userName';
+                    document.body.appendChild(this.nameElement);
+
+                    this.updateNameLabelPosition();
+
                 }
 
                 launch() {
@@ -429,10 +426,9 @@
                 }
 
                 update() {
-                    if (!DEBUG_MODE) {
-                        this.updatePosition();
-                        this.updateNameLabelPosition();
-                    }
+
+                    this.updatePosition();
+                    this.updateNameLabelPosition();
                     this.handleStatus();
                     this.checkOffScreen();
                 }
@@ -440,11 +436,46 @@
                 updatePosition() {
                     if (!this.element) return;
 
-                    const { x, y, angle } = this.body.position;
-                    this.element.style.top = `${y - 80}px`;
-                    this.element.style.left = `${x - 60}px`;
-                    this.element.style.transform = `rotate(${this.body.angle}rad)`;
+                    // Sorry this shit is messy but works 
+
+                    const { x, y } = this.body.position;
+                    const angle = this.body.angle;
+
+                    // Take the SVG size
+                    const hitboxWidth = 488;
+                    const hitboxHeight = 645;
+
+                    // Scale them the same
+                    const scale = 0.24;
+
+                    // Calculate the actual dimensions of the cone in pixels after scaling
+                    const coneWidth = hitboxWidth * scale;
+                    const coneHeight = hitboxHeight * scale;
+
+                    // Dynamically center it 
+                    const xOffset = coneWidth / 2;
+                    const yOffset = coneHeight / 2;
+
+                    // Adjustments for misalignment
+                    const verticalAdjustment = -16;
+                    const horizontalAdjustment = 0; // Isnt needed
+
+
+                    const adjustedX = x + horizontalAdjustment * Math.cos(angle) - verticalAdjustment * Math.sin(angle);
+                    const adjustedY = y + verticalAdjustment * Math.cos(angle) + horizontalAdjustment * Math.sin(angle);
+
+
+                    this.element.style.position = 'absolute';
+                    this.element.style.width = `${coneWidth}px`;
+                    this.element.style.height = `${coneHeight}px`;
+
+
+                    this.element.style.top = `${adjustedY - yOffset}px`;
+                    this.element.style.left = `${adjustedX - xOffset}px`;
+                    this.element.style.transform = `rotate(${angle}rad)`;
+                    this.element.style.transformOrigin = `center center`; // move anchor
                 }
+
 
                 updateNameLabelPosition() {
                     if (!this.nameElement) return;
