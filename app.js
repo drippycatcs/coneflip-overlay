@@ -22,11 +22,9 @@ const CONFIG = {
     PATHS: {
         DATA: path.join(__dirname, 'data'),
         PUBLIC: path.join(__dirname, 'public'),
-        LEADERBOARD: path.join(__dirname, 'data', 'leaderboard.json'),
-        SKINS_CONFIG: path.join(__dirname, 'public', 'skins', 'config.json'),
-        SKINS_DATA: path.join(__dirname, 'data', 'skins.json'),
-        LEADERBOARD_DB: path.join(__dirname, 'data', 'leaderboard.db'),
         SKINS_DB: path.join(__dirname, 'data', 'skins.db'),
+        LEADERBOARD_DB: path.join(__dirname, 'data', 'leaderboard.db'),
+        SKINS_CONFIG: path.join(__dirname, 'public', 'skins', 'config.json'),
     },
     CACHE_DURATION: 5000,
 };
@@ -258,7 +256,8 @@ class LeaderboardManager {
         } else {
             const wins = isWin ? 1 : 0;
             const fails = isWin ? 0 : 1;
-            const winrate = ((wins / (wins + fails)) * 100).toFixed(2);
+            const totalGames = wins + fails;
+            const winrate = ((wins / (totalGames)) * 100).toFixed(2);
 
             this.db
                 .prepare('INSERT INTO leaderboard (name, wins, fails, winrate) VALUES (?, ?, ?, ?)')
@@ -322,7 +321,6 @@ class SkinsManager {
         });
 
         insertMany(skinsConfig);
-
 
         const skins = this.db.prepare('SELECT * FROM skins').all();
 

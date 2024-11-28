@@ -22,14 +22,14 @@
         "unboxWeight": 40
     },
     {
-        "name": "negative",
-        "visuals": "cone_negative.png",
-        "canUnbox": true,
-        "unboxWeight": 20
-    },
-    {
         "name": "poorlydrawn",
         "visuals": "cone_poorlydrawn.png",
+        "canUnbox": true,
+        "unboxWeight": 40
+    },
+    {
+        "name": "negative",
+        "visuals": "cone_negative.png",
         "canUnbox": true,
         "unboxWeight": 20
     },
@@ -73,6 +73,6 @@
         "name": "rainbow",
         "visuals": "cone_rainbow.webp",
         "canUnbox": true,
-        "unboxWeight": 3
+        "unboxWeight": 0.5
     }
 ]
