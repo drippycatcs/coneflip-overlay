@@ -93,6 +93,13 @@
                 opacity: 0;
             }
         }
+
+        .cone {
+    position: absolute;
+    will-change: transform, top, left;
+    transition: opacity 0.5s ease;
+    z-index: 1;
+}
     </style>
 </head>
 
@@ -255,6 +262,7 @@
                     if (name === this.currentTopPlayer) {
                         return this.coneManager.availableSkins.gold;
                     }
+                    console.log(this.coneManager.availableSkins[this.playerSkins[name]])
                     return this.coneManager.availableSkins[this.playerSkins[name]] || this.coneManager.availableSkins.default;
                 }
 
@@ -302,6 +310,8 @@
                         return;
                     }
 
+
+                    console.log(this.gameManager.getPlayerSkin(name));
                     const texture =
                         this.gameManager.getPlayerSkin(name) ||
                         this.availableSkins.default;
@@ -355,233 +365,201 @@
             }
 
             class Cone {
-                constructor(name, positionX, texture, engine, coneVertices, world, coneManager, gameManager) {
-                    this.name = name;
-                    this.engine = engine;
-                    this.world = world;
-                    this.coneManager = coneManager;
-                    this.gameManager = gameManager;
-                    this.hasLaunched = false;
-                    this.celebrated = false;
-                    this.stationaryTimer = null;
-                    this.fadeInterval = null;
-                    this.opacity = 1.0;
-  
+    constructor(name, positionX, texture, engine, coneVertices, world, coneManager, gameManager) {
+        this.name = name;
+        this.engine = engine;
+        this.world = world;
+        this.coneManager = coneManager;
+        this.gameManager = gameManager;
+        this.hasLaunched = false;
+        this.celebrated = false;
+        this.stationaryTimer = null;
+        this.fadeInterval = null;
+        this.opacity = 1.0;
 
+        
+        this.body = Matter.Bodies.fromVertices(
+            positionX,
+            window.innerHeight - 85,
+            coneVertices,
+            {
+                restitution: 0.55,
+                density: 0.01,
+                friction: 0.1,
+                frictionAir: 0.02,
+                render: DEBUG_MODE
+                    ? {
+                          fillStyle: 'rgba(255, 0, 0, 0.5)', 
+                          strokeStyle: 'black',
+                          lineWidth: 1,
+                          visible: true,
+                      }
+                    : { visible: false }, 
+            },
+            true
+        );
 
-                    if (DEBUG_MODE) {
+        Matter.Body.setStatic(this.body, true);
+        Matter.Composite.add(this.world, this.body);
 
-                        this.body = Matter.Bodies.fromVertices(
-                            positionX,
-                            window.innerHeight - 85,
-                            coneVertices,
-                            {
-                                restitution: 0.55,
-                                density: 0.01,
-                                friction: 0.1,
-                                frictionAir: 0.02,
-                                render: {
-                                    fillStyle: 'orange',
-                                    strokeStyle: 'black',
-                                    lineWidth: 1,
-                                    visible: true,
-                                },
-                            },
-                            true
-                        );
-                    } else {
+        if (!DEBUG_MODE) {
+            
+            this.element = document.createElement('img');
+            this.element.src = texture; 
+            this.element.className = 'cone';
+            this.element.style.position = 'absolute';
+            this.element.style.width = '120px'; 
+            this.element.style.height = '160px'; 
+            this.element.style.transition = 'opacity 0.5s'; 
+            this.element.style.opacity = '1';
+            document.body.appendChild(this.element);
 
-                        this.body = Matter.Bodies.fromVertices(
-                            positionX,
-                            window.innerHeight - 85,
-                            coneVertices,
-                            {
-                                restitution: 0.55,
-                                density: 0.01,
-                                friction: 0.1,
-                                frictionAir: 0.02,
-                                render: {
-                                    visible: false,
-                                },
-                            },
-                            true
-                        );
-                    }
+            
+            this.nameElement = document.createElement('span');
+            this.nameElement.textContent = name;
+            this.nameElement.className = 'userName';
+            document.body.appendChild(this.nameElement);
+        } else {
+            
+            this.element = null;
+            this.nameElement = null;
+        }
 
-                    Matter.Body.setStatic(this.body, true);
-                    Matter.Composite.add(this.world, this.body);
-                    if (!DEBUG_MODE) {
-                        this.texture = new Image();
-                        this.texture.src = texture;
-                        this.textureWidth = 488.1 * 0.24;
-                        this.textureHeight = 645.4 * 0.24;
-                        this.textureLoaded = false;
-                        this.texture.onload = () => {
-                            this.textureLoaded = true;
-                        };
-                        this.canvas = this.gameManager.render.canvas;
-                        this.context = this.gameManager.render.context;
-                    }
+        if (!DEBUG_MODE) {
+            this.updateNameLabelPosition();
+        }
+    }
 
-
-                    this.nameElement = document.createElement('span');
-                    this.nameElement.textContent = name;
-                    this.nameElement.className = 'userName';
-                    document.body.appendChild(this.nameElement);
-
-                    this.updateNameLabelPosition();
-                }
-
-                launch() {
-                    Matter.Body.setStatic(this.body, false);
-                    this.applyRandomUpwardForceAndSpin();
-                    this.hasLaunched = true;
-                    setTimeout(() => {
-                        if (Math.random() < 1 / this.gameManager.slowOdds) {
-                            this.gameManager.triggerSlowMotion();
-                        }
-                    }, 500);
-                }
-
-                applyRandomUpwardForceAndSpin() {
-                    const upwardForceMultiplier = 12;
-                    const forceMagnitude = upwardForceMultiplier + Math.random() * 0.05;
-                    const horizontalForce = (Math.random() - 0.5) * 0.1;
-                    const force = { x: horizontalForce, y: -forceMagnitude };
-                    Matter.Body.applyForce(this.body, this.body.position, force);
-                    const angularVelocity = 0.2 + Math.random() * 0.8;
-                    const spinDirection = Math.random() > 0.5 ? 1 : -1;
-                    Matter.Body.setAngularVelocity(this.body, angularVelocity * spinDirection);
-                }
-
-                update() {
-                    this.updateNameLabelPosition();
-                    this.handleStatus();
-                    this.checkOffScreen();
-
-                    if (!DEBUG_MODE) {
-                        this.renderTexture();
-                    }
-                }
-
-                updateNameLabelPosition() {
-                    this.nameElement.style.top = `${this.body.position.y - 150}px`;
-                    this.nameElement.style.left = `${this.body.position.x - this.nameElement.offsetWidth / 2}px`;
-                }
-
-                renderTexture() {
-                    if (!this.textureLoaded) return;
-                    const context = this.context;
-                    const body = this.body;
-                    context.save();
-
-                    context.translate(body.position.x, body.position.y);
-
-                    context.rotate(body.angle);
-
-                    context.globalAlpha = this.opacity;
-                    context.drawImage(
-                        this.texture,
-                        -this.textureWidth / 2,
-                        -this.textureHeight / 2,
-                        this.textureWidth,
-                        this.textureHeight
-                    );
-
-                    context.restore();
-                }
-
-                handleStatus() {
-                    if (!this.hasLaunched) return;
-
-                    const isStationary =
-                        Math.abs(this.body.angularVelocity) < 0.05 &&
-                        Math.abs(this.body.velocity.x) < 0.05 &&
-                        Math.abs(this.body.velocity.y) < 0.05;
-
-                    if (isStationary) {
-                        if (!this.stationaryTimer) {
-                            this.stationaryTimer = setTimeout(() => {
-                                if (this.isUpright()) {
-                                    if (!this.celebrated) {
-                                        this.celebrated = true;
-                                        document.getElementById('coolSound').play();
-                                        triggerConfetti(this.body.position);
-                                        this.gameManager.socket.emit('win', this.name);
-                                    }
-                                } else {
-                                    if (!this.celebrated) {
-                                        this.celebrated = true;
-                                        document.getElementById('failSound').play();
-                                        this.gameManager.socket.emit('fail', this.name);
-                                    }
-                                }
-                                this.startFadeOut();
-                            }, 2000);
-                        }
-                    } else {
-                        if (this.stationaryTimer) {
-                            clearTimeout(this.stationaryTimer);
-                            this.stationaryTimer = null;
-                        }
-                        this.celebrated = false;
-                    }
-                }
-
-                isUpright() {
-                    let angle = this.body.angle % (2 * Math.PI);
-                    if (angle < 0) angle += 2 * Math.PI;
-                    const uprightTolerance = 0.2;
-                    return (
-                        angle < uprightTolerance ||
-                        angle > (2 * Math.PI - uprightTolerance) ||
-                        Math.abs(angle - Math.PI) < uprightTolerance
-                    );
-                }
-
-                startFadeOut() {
-                    this.fadeInterval = setInterval(() => {
-                        this.opacity -= 0.01;
-                        if (this.opacity <= 0) {
-                            this.opacity = 0;
-                            clearInterval(this.fadeInterval);
-                            this.nameElement.remove();
-                            Matter.Composite.remove(this.world, this.body);
-                            this.coneManager.removeCone(this);
-                        }
-                        this.nameElement.style.opacity = this.opacity;
-                    }, 10);
-                }
-
-                checkOffScreen() {
-                    const buffer = 100;
-                    if (
-                        this.body.position.y > window.innerHeight + buffer ||
-                        this.body.position.x < -buffer ||
-                        this.body.position.x > window.innerWidth + buffer
-                    ) {
-                        this.remove();
-                        console.log("Removed off-screen cone.");
-                    }
-                }
-
-                remove() {
-                    this.nameElement.remove();
-                    Matter.Composite.remove(this.world, this.body);
-                    this.coneManager.removeCone(this);
-
-                    if (this.stationaryTimer) {
-                        clearTimeout(this.stationaryTimer);
-                        this.stationaryTimer = null;
-                    }
-                    if (this.fadeInterval) {
-                        clearInterval(this.fadeInterval);
-                        this.fadeInterval = null;
-                    }
-                }
+    launch() {
+        Matter.Body.setStatic(this.body, false);
+        this.applyRandomUpwardForceAndSpin();
+        this.hasLaunched = true;
+        setTimeout(() => {
+            if (Math.random() < 1 / this.gameManager.slowOdds) {
+                this.gameManager.triggerSlowMotion();
             }
+        }, 500);
+    }
 
+    applyRandomUpwardForceAndSpin() {
+        const upwardForceMultiplier = 12;
+        const forceMagnitude = upwardForceMultiplier + Math.random() * 0.05;
+        const horizontalForce = (Math.random() - 0.5) * 0.1;
+        const force = { x: horizontalForce, y: -forceMagnitude };
+        Matter.Body.applyForce(this.body, this.body.position, force);
+        const angularVelocity = 0.2 + Math.random() * 0.8;
+        const spinDirection = Math.random() > 0.5 ? 1 : -1;
+        Matter.Body.setAngularVelocity(this.body, angularVelocity * spinDirection);
+    }
 
+    update() {
+        if (!DEBUG_MODE) {
+            this.updatePosition();
+            this.updateNameLabelPosition();
+        }
+        this.handleStatus();
+        this.checkOffScreen();
+    }
+
+    updatePosition() {
+        if (!this.element) return;
+        
+        const { x, y, angle } = this.body.position;
+        this.element.style.top = `${y - 80}px`; 
+        this.element.style.left = `${x - 60}px`; 
+        this.element.style.transform = `rotate(${this.body.angle}rad)`;
+    }
+
+    updateNameLabelPosition() {
+        if (!this.nameElement) return;
+        this.nameElement.style.top = `${this.body.position.y - 150}px`;
+        this.nameElement.style.left = `${this.body.position.x - this.nameElement.offsetWidth / 2}px`;
+    }
+
+    handleStatus() {
+        if (!this.hasLaunched) return;
+
+        const isStationary =
+            Math.abs(this.body.angularVelocity) < 0.05 &&
+            Math.abs(this.body.velocity.x) < 0.05 &&
+            Math.abs(this.body.velocity.y) < 0.05;
+
+        if (isStationary) {
+            if (!this.stationaryTimer) {
+                this.stationaryTimer = setTimeout(() => {
+                    if (this.isUpright()) {
+                        if (!this.celebrated) {
+                            this.celebrated = true;
+                            document.getElementById('coolSound').play();
+                            triggerConfetti(this.body.position);
+                            this.gameManager.socket.emit('win', this.name);
+                        }
+                    } else {
+                        if (!this.celebrated) {
+                            this.celebrated = true;
+                            document.getElementById('failSound').play();
+                            this.gameManager.socket.emit('fail', this.name);
+                        }
+                    }
+                    this.startFadeOut();
+                }, 2000);
+            }
+        } else {
+            if (this.stationaryTimer) {
+                clearTimeout(this.stationaryTimer);
+                this.stationaryTimer = null;
+            }
+            this.celebrated = false;
+        }
+    }
+
+    isUpright() {
+        let angle = this.body.angle % (2 * Math.PI);
+        if (angle < 0) angle += 2 * Math.PI;
+        const uprightTolerance = 0.2;
+        return (
+            angle < uprightTolerance ||
+            angle > (2 * Math.PI - uprightTolerance) ||
+            Math.abs(angle - Math.PI) < uprightTolerance
+        );
+    }
+
+    startFadeOut() {
+        if (!DEBUG_MODE) {
+            this.element.style.opacity = '0';
+            this.nameElement.style.opacity = '0';
+            setTimeout(() => {
+                this.remove();
+            }, 500); 
+        } else {
+            this.remove(); 
+        }
+    }
+
+    checkOffScreen() {
+        const buffer = 100;
+        if (
+            this.body.position.y > window.innerHeight + buffer ||
+            this.body.position.x < -buffer ||
+            this.body.position.x > window.innerWidth + buffer
+        ) {
+            this.remove();
+            console.log("Removed off-screen cone.");
+        }
+    }
+
+    remove() {
+        if (this.nameElement) this.nameElement.remove();
+        if (this.element) this.element.remove();
+        Matter.Composite.remove(this.world, this.body);
+        this.coneManager.removeCone(this);
+
+        if (this.stationaryTimer) {
+            clearTimeout(this.stationaryTimer);
+            this.stationaryTimer = null;
+        }
+    }
+}
 
             const triggerConfetti = (position) => {
                 const origin = {

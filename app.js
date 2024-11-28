@@ -1,10 +1,10 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
+const Database = require('better-sqlite3');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-
 
 /**
  * @typedef {{name: string, visuals: string, canUnbox: boolean, unboxWeight?: number}} Skin
@@ -12,11 +12,10 @@ const io = require('socket.io')(http);
 
 /**
  * `canUnbox === true`
- * 
+ *
  * `unboxWeight !== undefined`
  * @typedef {{name: string, visuals: string, canUnbox: boolean, unboxWeight: number}} AvailableToUnboxSkin
  */
-
 
 const CONFIG = {
     PORT: process.env.PORT || 3000,
@@ -26,14 +25,17 @@ const CONFIG = {
         LEADERBOARD: path.join(__dirname, 'data', 'leaderboard.json'),
         SKINS_CONFIG: path.join(__dirname, 'public', 'skins', 'config.json'),
         SKINS_DATA: path.join(__dirname, 'data', 'skins.json'),
+        LEADERBOARD_DB: path.join(__dirname, 'data', 'leaderboard.db'),
+        SKINS_DB: path.join(__dirname, 'data', 'skins.db'),
     },
     CACHE_DURATION: 5000,
 };
 
-
 const errorHandler = (err, req, res, next) => {
     console.error('Error:', err);
-    res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
+    res
+        .status(err.status || 500)
+        .json({ error: err.message || 'Internal Server Error' });
 };
 
 app.use(express.static(CONFIG.PATHS.PUBLIC));
@@ -72,9 +74,10 @@ app.get('/api/leaderboard', async (req, res, next) => {
             let result;
             const data = await LeaderboardManager.getPlayer(name);
             if (data.hasPlayed)
-                result = `${name} cone stats: ${data.rank} (Ws: ${data.wins} / Ls: ${data.fails} / WR%: ${data.winrate})`;
-            else
-                result = `${name} never tried coneflipping.`;
+                result = `${name} cone stats: ${data.rank} (Ws: ${data.wins} / Ls: ${data.fails} / WR%: ${data.winrate.toFixed(
+                    2
+                )})`;
+            else result = `${name} never tried coneflipping.`;
             return res.send(result);
         }
 
@@ -88,7 +91,9 @@ app.get('/api/leaderboard', async (req, res, next) => {
 app.get('/api/leaderboard/average', async (req, res, next) => {
     try {
         const data = await LeaderboardManager.calculateLbStats();
-        res.send(`${data.totalGamesPlayed} cones have been redeemed by ${data.playerCount} players with an average winrate of ${data.averageWinRate}%!`);
+        res.send(
+            `${data.totalGamesPlayed} cones have been redeemed by ${data.playerCount} players with an average winrate of ${data.averageWinRate}%!`
+        );
     } catch (err) {
         next(err);
     }
@@ -99,13 +104,13 @@ app.get('/api/skins/available', async (req, res, next) => {
         const availableSkins = {};
         Object.values(SkinsManager.availableSkins).forEach((skin) => {
             availableSkins[skin.name] = `/skins/${skin.visuals}`;
-        })
+        });
 
-        res.send(availableSkins)
+        res.send(availableSkins);
     } catch (err) {
         next(err);
     }
-})
+});
 
 app.get('/api/skins/set', async (req, res, next) => {
     const name = req.query.name?.toLowerCase().trim() || '';
@@ -121,7 +126,9 @@ app.get('/api/skins/set', async (req, res, next) => {
             result = await SkinsManager.setRandomSkin(name);
         } else {
             if (!skin) {
-                return res.status(400).json({ error: 'Skin must be provided when random is false.' });
+                return res
+                    .status(400)
+                    .json({ error: 'Skin must be provided when random is false.' });
             }
             result = await SkinsManager.setSkin(name, skin);
         }
@@ -154,40 +161,36 @@ app.get('/api/skins/odds', (req, res, next) => {
 class LeaderboardManager {
     static cache = {
         data: null,
-        lastUpdate: 0
+        lastUpdate: 0,
     };
 
-    static async initialize() {
-        try {
-            await fs.access(CONFIG.PATHS.LEADERBOARD);
-        } catch {
-            await fs.mkdir(path.dirname(CONFIG.PATHS.LEADERBOARD), { recursive: true });
-            await fs.writeFile(CONFIG.PATHS.LEADERBOARD, JSON.stringify([]), 'utf8');
-        }
+    static db = new Database(CONFIG.PATHS.LEADERBOARD_DB);
+
+    static initialize() {
+        this.db.prepare(
+            `CREATE TABLE IF NOT EXISTS leaderboard (
+                name TEXT PRIMARY KEY,
+                wins INTEGER NOT NULL DEFAULT 0,
+                fails INTEGER NOT NULL DEFAULT 0,
+                winrate REAL NOT NULL DEFAULT 0.0
+            )`
+        ).run();
     }
 
     static async getLeaderboard() {
         const now = Date.now();
-        if (this.cache.data && (now - this.cache.lastUpdate < CONFIG.CACHE_DURATION)) {
+        if (this.cache.data && now - this.cache.lastUpdate < CONFIG.CACHE_DURATION) {
             return this.cache.data;
         }
 
         try {
-            const data = await fs.readFile(CONFIG.PATHS.LEADERBOARD, 'utf8');
-            this.cache.data = JSON.parse(data);
+            const data = this.db.prepare('SELECT * FROM leaderboard').all();
+            this.cache.data = this.sortLeaderboard(data);
             this.cache.lastUpdate = now;
             return this.cache.data;
         } catch (err) {
             throw new Error('Failed to read leaderboard data');
         }
-    }
-
-    static async updateLeaderboard(data) {
-        const sortedData = this.sortLeaderboard(data);
-        await fs.writeFile(CONFIG.PATHS.LEADERBOARD, JSON.stringify(sortedData, null, 2), 'utf8');
-        this.cache.data = sortedData;
-        this.cache.lastUpdate = Date.now();
-        return this.cache.data;
     }
 
     static sortLeaderboard(data) {
@@ -216,7 +219,8 @@ class LeaderboardManager {
             { totalWinRate: 0, totalGamesPlayed: 0, playerCount: 0 }
         );
 
-        const averageWinRate = playerCount > 0 ? (totalWinRate / playerCount).toFixed(2) : '0.00';
+        const averageWinRate =
+            playerCount > 0 ? (totalWinRate / playerCount).toFixed(2) : '0.00';
 
         return { averageWinRate, totalGamesPlayed, playerCount };
     }
@@ -229,27 +233,39 @@ class LeaderboardManager {
         const player = data[index];
         const rank = `${index + 1}/${data.length}`;
 
-        return { hasPlayed: true, rank: rank, wins: player.wins, fails: player.fails, winrate: player.winrate };
+        return {
+            hasPlayed: true,
+            rank: rank,
+            wins: player.wins,
+            fails: player.fails,
+            winrate: player.winrate,
+        };
     }
 
     static async updatePlayer(name, isWin) {
-        const data = await this.getLeaderboard();
-        const player = data.find(entry => entry.name === name);
+        const stmtGet = this.db.prepare('SELECT * FROM leaderboard WHERE name = ?');
+        const player = stmtGet.get(name);
 
         if (player) {
-            if (isWin) player.wins++;
-            else player.fails++;
-            player.winrate = ((player.wins / (player.wins + player.fails)) * 100).toFixed(2);
+            const wins = isWin ? player.wins + 1 : player.wins;
+            const fails = isWin ? player.fails : player.fails + 1;
+            const totalGames = wins + fails;
+            const winrate = ((wins / totalGames) * 100).toFixed(2);
+
+            this.db
+                .prepare('UPDATE leaderboard SET wins = ?, fails = ?, winrate = ? WHERE name = ?')
+                .run(wins, fails, winrate, name);
         } else {
-            data.push({
-                name: name,
-                wins: isWin ? 1 : 0,
-                fails: isWin ? 0 : 1,
-                winrate: isWin ? '100.00' : '0.00'
-            });
+            const wins = isWin ? 1 : 0;
+            const fails = isWin ? 0 : 1;
+            const winrate = ((wins / (wins + fails)) * 100).toFixed(2);
+
+            this.db
+                .prepare('INSERT INTO leaderboard (name, wins, fails, winrate) VALUES (?, ?, ?, ?)')
+                .run(name, wins, fails, winrate);
         }
 
-        return this.updateLeaderboard(data);
+        return this.getLeaderboard();
     }
 }
 
@@ -259,30 +275,70 @@ class SkinsManager {
      */
     static availableSkins = {};
 
+    static db = new Database(CONFIG.PATHS.SKINS_DB);
+
     static async initialize() {
-        try {
-            await fs.access(CONFIG.PATHS.SKINS_DATA);
-        } catch {
-            await fs.mkdir(path.dirname(CONFIG.PATHS.SKINS_DATA), { recursive: true });
-            await fs.writeFile(CONFIG.PATHS.SKINS_DATA, JSON.stringify([]), 'utf8');
-        }
-        this.availableSkins = await this.loadConfiguredSkins();
+
+        this.db.prepare(
+            `CREATE TABLE IF NOT EXISTS skins (
+                name TEXT PRIMARY KEY,
+                visuals TEXT NOT NULL,
+                canUnbox BOOLEAN NOT NULL DEFAULT 0,
+                unboxWeight REAL DEFAULT 0
+            )`
+        ).run();
+
+        this.db.prepare(
+            `CREATE TABLE IF NOT EXISTS user_skins (
+                name TEXT PRIMARY KEY,
+                skin TEXT NOT NULL
+            )`
+        ).run();
+
+
+        await this.loadConfiguredSkins();
     }
 
     static async loadConfiguredSkins() {
         const data = await fs.readFile(CONFIG.PATHS.SKINS_CONFIG);
         const skinsConfig = JSON.parse(data);
 
-        const skins = {};
-        skinsConfig.forEach((skin) => {
-            skins[skin.name] = skin;
+
+        this.db.prepare('DELETE FROM skins').run();
+
+        const insertStmt = this.db.prepare(
+            'INSERT OR REPLACE INTO skins (name, visuals, canUnbox, unboxWeight) VALUES (?, ?, ?, ?)'
+        );
+
+        const insertMany = this.db.transaction((skins) => {
+            for (const skin of skins) {
+                insertStmt.run(
+                    skin.name,
+                    skin.visuals,
+                    skin.canUnbox ? 1 : 0,
+                    skin.unboxWeight || 0
+                );
+            }
         });
-        return skins;
+
+        insertMany(skinsConfig);
+
+
+        const skins = this.db.prepare('SELECT * FROM skins').all();
+
+        this.availableSkins = {};
+        skins.forEach((skin) => {
+            this.availableSkins[skin.name] = skin;
+        });
     }
 
     static async getUserSkins() {
-        const data = await fs.readFile(CONFIG.PATHS.SKINS_DATA, 'utf8');
-        return JSON.parse(data);
+        const data = this.db.prepare('SELECT * FROM user_skins').all();
+        return data;
+    }
+
+    static isValidSkin(name) {
+        return name in this.availableSkins;
     }
 
     static async setSkin(name, skin) {
@@ -290,16 +346,10 @@ class SkinsManager {
             throw new Error('Invalid skin.');
         }
 
-        const data = await this.getUserSkins();
-        const playerIndex = data.findIndex(user => user.name === name);
+        this.db
+            .prepare('INSERT OR REPLACE INTO user_skins (name, skin) VALUES (?, ?)')
+            .run(name, skin);
 
-        if (playerIndex === -1) {
-            data.push({ name, skin });
-        } else {
-            data[playerIndex].skin = skin;
-        }
-
-        await fs.writeFile(CONFIG.PATHS.SKINS_DATA, JSON.stringify(data, null, 2), 'utf8');
         return `Skin for ${name} updated to ${skin}.`;
     }
 
@@ -313,7 +363,7 @@ class SkinsManager {
             currentWeight += skin.unboxWeight;
             if (random <= currentWeight) {
                 await this.setSkin(name, skin.name);
-                const odds = (skin.unboxWeight / totalWeight * 100).toFixed(1);
+                const odds = ((skin.unboxWeight / totalWeight) * 100).toFixed(1);
                 return `${name} unboxed "${skin.name}" skin (${odds}%).`;
             }
         }
@@ -323,7 +373,9 @@ class SkinsManager {
         const skinsAvailableToUnbox = this.getSkinsAvailableToUnbox();
         const totalWeight = skinsAvailableToUnbox.reduce((sum, skin) => sum + skin.unboxWeight, 0);
         return skinsAvailableToUnbox
-            .map((skin) => `${skin.name} (${(skin.unboxWeight / totalWeight * 100).toFixed(1)}%)`)
+            .map(
+                (skin) => `${skin.name} (${((skin.unboxWeight / totalWeight) * 100).toFixed(1)}%)`
+            )
             .join(', ');
     }
 
@@ -332,10 +384,6 @@ class SkinsManager {
      */
     static getSkinsAvailableToUnbox() {
         return Object.values(this.availableSkins).filter((skin) => skin.canUnbox);
-    }
-
-    static isValidSkin(name) {
-        return name in this.availableSkins;
     }
 }
 
@@ -374,10 +422,7 @@ io.on('connection', async (socket) => {
 
 async function startServer() {
     try {
-        await Promise.all([
-            LeaderboardManager.initialize(),
-            SkinsManager.initialize()
-        ]);
+        await Promise.all([LeaderboardManager.initialize(), SkinsManager.initialize()]);
 
         http.listen(CONFIG.PORT, () => {
             console.log(`Server is running on port ${CONFIG.PORT}`);

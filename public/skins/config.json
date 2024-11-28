@@ -28,6 +28,12 @@
         "unboxWeight": 20
     },
     {
+        "name": "poorlydrawn",
+        "visuals": "cone_poorlydrawn.png",
+        "canUnbox": true,
+        "unboxWeight": 20
+    },
+    {
         "name": "comic",
         "visuals": "cone_comic.png",
         "canUnbox": true,
@@ -60,6 +66,12 @@
     {
         "name": "printstream",
         "visuals": "cone_printstream.png",
+        "canUnbox": true,
+        "unboxWeight": 3
+    },
+    {
+        "name": "rainbow",
+        "visuals": "cone_rainbow.webp",
         "canUnbox": true,
         "unboxWeight": 3
     }
