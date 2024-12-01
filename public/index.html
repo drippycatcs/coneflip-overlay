@@ -365,9 +365,10 @@
                         window.innerHeight - 85,
                         coneVertices,
                         {
-                            restitution: 0.35,
-                            density: 0.01,
-                            friction: 0.8,
+
+                            restitution: 0.2,
+                            density: 0.001,
+                            friction: 0.5,
                             frictionAir: 0.02,
                             render: DEBUG_MODE
                                 ? {
@@ -411,7 +412,7 @@
                 }
 
                 applyRandomUpwardForceAndSpin() {
-                    const upwardForceMultiplier = 12;
+                    const upwardForceMultiplier = 1.1;
                     const forceMagnitude = upwardForceMultiplier + Math.random() * 0.05;
                     const horizontalForce = (Math.random() - 0.5) * 0.1;
                     const force = { x: horizontalForce, y: -forceMagnitude };
