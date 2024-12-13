@@ -16,7 +16,7 @@
             position: fixed;
             top: 30px;
             right: -600px;
-            width: 525px;
+            width: 575px;
             background: rgba(0, 0, 0, .98);
             border-radius: 15px;
             padding: 15px 25px;
@@ -27,6 +27,7 @@
             transition: right 0.8s cubic-bezier(0.25, 0.8, 0.25, 1),
                 opacity 0.5s ease-in-out;
             opacity: 0;
+            overflow: hidden;
         }
 
         .leaderboard-container.visible {
@@ -39,6 +40,26 @@
             text-align: center;
             margin-bottom: 15px;
             color: #94B658;
+        }
+
+        .leaderboard-table-wrapper {
+            max-height: 400px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #94B658 rgba(255, 255, 255, 0.1);
+        }
+
+        .leaderboard-table-wrapper::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .leaderboard-table-wrapper::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .leaderboard-table-wrapper::-webkit-scrollbar-thumb {
+            background-color: #94B658;
+            border-radius: 4px;
         }
 
         table {
@@ -55,9 +76,25 @@
         }
 
         th {
-            border-bottom: 4px solid #555;
+            position: sticky;
+            top: 0;
+            background: rgba(0, 0, 0, .98);
             font-weight: normal;
             color: #94B658;
+            z-index: 10;
+        }
+
+        th:after,
+        th:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            width: 100%;
+        }
+
+        th:after {
+            bottom: 0;
+            border-bottom: 4px solid #555;
         }
 
         tr:nth-child(even) {
@@ -69,9 +106,14 @@
         }
 
         .golden-cone {
-            width: 24px;
+            width: 20px;
             vertical-align: middle;
             margin-right: 9px;
+        }
+
+        .player-rank {
+            color: #94B658;
+            text-align: center;
         }
 
         .placeholder-row {
@@ -82,28 +124,41 @@
 
 <body>
     <div class="leaderboard-container">
-        <h2>Coneflip Leaderboard</h2>
-        <table id="leaderboard-table">
-            <thead>
-                <tr>
-                    <th>Player</th>
-                    <th>Ws</th>
-                    <th>Ls</th>
-                    <th>WR (%)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr id="row-1"></tr>
-                <tr id="row-2"></tr>
-                <tr id="row-3"></tr>
-                <tr id="row-4"></tr>
-                <tr id="row-5"></tr>
-            </tbody>
-        </table>
+        <h2>CONEFLIP LEADERBOARD</h2>
+        <div class="leaderboard-table-wrapper">
+            <table id="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Player</th>
+                        <th>Ws</th>
+                        <th>Ls</th>
+                        <th>WR (%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- // -->
+                </tbody>
+            </table>
+        </div>
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        function createTableRows(count) {
+            const tbody = document.querySelector("#leaderboard-table tbody");
+            tbody.innerHTML = '';
+
+            for (let i = 0; i < count; i++) {
+                const row = document.createElement('tr');
+                row.id = `row-${i + 1}`;
+                row.innerHTML = '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>';
+                row.classList.add('placeholder-row');
+                tbody.appendChild(row);
+            }
+        }
+
         function updateTable(data) {
+            createTableRows(25);
             const rows = document.querySelectorAll("#leaderboard-table tbody tr");
             for (let i = 0; i < rows.length; i++) {
                 const row = rows[i];
@@ -114,15 +169,13 @@
                         ? '<img src="skins/cone_gold.png" class="golden-cone">'
                         : '';
                     row.innerHTML = `
-                        <td>${goldenConeIcon}${player.name || '—'}</td>
+                        <td class="player-rank">${isTopPlayer ? goldenConeIcon : i + 1}</td>
+                        <td>${player.name || '—'}</td>
                         <td>${player.wins || '—'}</td>
                         <td>${player.fails || '—'}</td>
                         <td>${player.winrate || '—'}</td>
                     `;
                     row.className = isTopPlayer ? 'top-player' : '';
-                } else {
-                    row.innerHTML = '<td>—</td><td>—</td><td>—</td><td>—</td>';
-                    row.className = 'placeholder-row';
                 }
             }
         }
@@ -139,6 +192,7 @@
 
         let isVisible = false;
         let hideTimeout;
+        let scrollInterval = null;
 
         const socket = io();
 
@@ -150,17 +204,43 @@
             if (isVisible) return;
 
             const leaderboard = document.querySelector('.leaderboard-container');
+            const wrapper = document.querySelector('.leaderboard-table-wrapper');
+
+            wrapper.scrollTop = 0;
+
             leaderboard.classList.add('visible');
             isVisible = true;
+
+            if (scrollInterval) {
+                clearInterval(scrollInterval);
+            }
+
+            setTimeout(() => {
+                let scrollAmount = 0;
+                scrollInterval = setInterval(() => {
+                    wrapper.scrollTop = scrollAmount;
+                    scrollAmount += 2;
+
+                    if (wrapper.scrollTop >= wrapper.scrollHeight - wrapper.clientHeight ||
+                        !leaderboard.classList.contains('visible')) {
+                        clearInterval(scrollInterval);
+                        scrollInterval = null;
+                    }
+                }, 20);
+            }, 1000);
 
             clearTimeout(hideTimeout);
             hideTimeout = setTimeout(() => {
                 leaderboard.classList.remove('visible');
                 isVisible = false;
-            }, 10000);
+
+                if (scrollInterval) {
+                    clearInterval(scrollInterval);
+                    scrollInterval = null;
+                }
+            }, 15000);
         })
     </script>
-
 </body>
 
 </html>
