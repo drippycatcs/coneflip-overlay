@@ -103,6 +103,20 @@
             transition: opacity 0.5s ease;
             z-index: 1;
         }
+
+        .cone_holo {
+            position: absolute;
+            height: 160px;
+            width: 120px;
+            transition: background-position 0.1s ease;
+            z-index: 1;
+            -webkit-mask-image: url(skins/cone_mask.png);
+            mask-image: url(skins/cone_mask.png);
+            mask-repeat: no-repeat;
+            -webkit-mask-repeat: no-repeat;
+            mask-position: center;
+      
+        }
     </style>
 </head>
 
@@ -386,17 +400,39 @@
                     Matter.Composite.add(this.world, this.body);
 
 
-                    this.element = document.createElement('img');
-                    this.element.src = texture;
-                    this.element.className = 'cone';
-                    document.body.appendChild(this.element);
+                    if (texture.includes("holo_")) {
+                        this.overlay = document.createElement('img');
+                        this.overlay.src = 'skins/transparent.png';
+                        this.overlay.className = 'cone';
+                        this.element = document.createElement('div');
 
-                    this.nameElement = document.createElement('span');
-                    this.nameElement.textContent = name;
-                    this.nameElement.className = 'userName';
-                    document.body.appendChild(this.nameElement);
+                        this.element.className = 'cone_holo';
+                        this.element.style.backgroundImage = `url(${texture})`;
+                        document.body.appendChild(this.element);
 
-                    this.updateNameLabelPosition();
+                        this.nameElement = document.createElement('span');
+                        this.nameElement.textContent = name;
+                        this.nameElement.className = 'userName';
+                        document.body.appendChild(this.nameElement);
+                        this.element.appendChild(this.overlay);
+                        this.updateNameLabelPosition();
+                    } else {
+
+                        this.element = document.createElement('img');
+                        this.element.src = texture;
+                        this.element.className = 'cone';
+                        document.body.appendChild(this.element);
+
+                        this.nameElement = document.createElement('span');
+                        this.nameElement.textContent = name;
+                        this.nameElement.className = 'userName';
+                        document.body.appendChild(this.nameElement);
+
+                        this.updateNameLabelPosition();
+                    }
+
+
+
 
                 }
 
@@ -463,6 +499,8 @@
 
                     this.element.style.top = `${adjustedY - yOffset}px`;
                     this.element.style.left = `${adjustedX - xOffset}px`;
+                    this.element.style.backgroundPositionY = `${(adjustedY - yOffset) / 2}px`;
+                    this.element.style.backgroundPositionX = `${(adjustedX - xOffset) / 2}px`;
                     this.element.style.transform = `rotate(${angle}rad)`;
                     this.element.style.transformOrigin = `center center`; // move anchor
                 }

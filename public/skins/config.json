@@ -74,5 +74,11 @@
         "visuals": "cone_rainbow.webp",
         "canUnbox": true,
         "unboxWeight": 0.5
+    },
+    {
+        "name": "darkmatter",
+        "visuals": "holo_darkmatter.jpg",
+        "canUnbox": true,
+        "unboxWeight": 1
     }
 ]
