@@ -81,4 +81,11 @@
         "canUnbox": true,
         "unboxWeight": 1
     }
+,
+    {
+        "name": "iridescent",
+        "visuals": "holo_iridescent.jpg",
+        "canUnbox": true,
+        "unboxWeight": 1
+    }
 ]
