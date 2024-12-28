@@ -148,7 +148,7 @@
 
     <script>
         (() => {
-            const DEBUG_MODE = true;
+            const DEBUG_MODE = false;
 
             const slowOdds = 20; // aka 1 in 20
             const {
@@ -292,10 +292,14 @@
                     this.cones = [];
                     this.coneQueue = [];
                     this.positions = [
-                        { x: window.innerWidth / 2, occupied: false },
-                        { x: window.innerWidth / 4, occupied: false },
-                        { x: (3 * window.innerWidth) / 4, occupied: false },
+                        { x: window.innerWidth / 5, occupied: false },
+                        { x: (2 * window.innerWidth) / 5, occupied: false },
+                        { x: (3 * window.innerWidth) / 5, occupied: false },
+                        { x: (4 * window.innerWidth) / 5, occupied: false },
+                        
                     ];
+
+
 
                     this.availableSkins = {};
 
@@ -353,9 +357,10 @@
                 }
 
                 updatePositions() {
-                    this.positions[0].x = window.innerWidth / 2;
-                    this.positions[1].x = window.innerWidth / 4;
-                    this.positions[2].x = (3 * window.innerWidth) / 4;
+                    this.positions[0].x = window.innerWidth / 5;           // 20% of window width
+this.positions[1].x = (2 * window.innerWidth) / 5;     // 40% of window width
+this.positions[2].x = (3 * window.innerWidth) / 5;     // 60% of window width
+this.positions[3].x = (4 * window.innerWidth) / 5;   
                 }
 
                 removeCone(cone) {
