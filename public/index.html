@@ -139,6 +139,8 @@
     <audio id="coolSound" src="O.wav"></audio>
     <audio id="failSound" src="bwomp.wav"></audio>
     <audio id="newGold" src="newGold.wav"></audio>
+    <audio id="slowin" src="slowin.mp3"></audio>
+    <audio id="slowout" src="slowout.mp3"></audio>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488.1 645.4" style="display: none;">
         <path id="hitbox"
             d="M488,539.6v-12.7c0-4.2-1.8-8.2-4.9-10.9-2.6-2.2-5.9-3.4-9.2-3.4h-69.9L311.6,45.4c-4.2-21.3-20.3-38.3-41.3-43.6-4.5-1.2-9.2-1.7-13.9-1.7h-24.8c-4.7,0-9.4.6-13.9,1.7-21,5.4-37.1,22.3-41.3,43.6l-92.3,467.2H14c-4.2,0-8.2,1.8-10.9,4.9-2.2,2.6-3.4,5.9-3.4,9.2L0,573.2v57.8c0,4.2,1.8,8.2,4.9,10.9,2.6,2.2,5.9,3.4,9.2,3.4h459.7c3.4,0,6.7-1.2,9.2-3.4,3.2-2.7,5-6.7,4.9-10.9v-91c0-.2,0-.3,0-.5Z" />
@@ -146,7 +148,7 @@
 
     <script>
         (() => {
-            const DEBUG_MODE = false;
+            const DEBUG_MODE = true;
 
             const slowOdds = 20; // aka 1 in 20
             const {
@@ -166,7 +168,7 @@
                     this.socket = io();
                     this.engine = Engine.create();
                     this.world = this.engine.world;
-                    this.world.gravity.y = 1.3;
+                    this.world.gravity.y = 1.4;
                     this.render = Render.create({
                         canvas: document.getElementById('world'),
                         engine: this.engine,
@@ -195,7 +197,7 @@
                 setupGround() {
                     this.ground = Bodies.rectangle(
                         window.innerWidth / 2,
-                        window.innerHeight - 10,
+                        window.innerHeight,
                         window.innerWidth,
                         20,
                         {
@@ -273,11 +275,13 @@
                 triggerSlowMotion() {
                     if (this.isSlowMotion) return;
                     this.isSlowMotion = true;
-                    this.engine.timing.timeScale = 0.2;
+                    this.engine.timing.timeScale = 0.1
+                    document.getElementById('slowin').play();
 
                     setTimeout(() => {
                         this.engine.timing.timeScale = 1;
                         this.isSlowMotion = false;
+                        document.getElementById('slowout').play();
                     }, 3500);
                 }
             }
@@ -381,9 +385,9 @@
                         coneVertices,
                         {
 
-                            restitution: 0.2,
-                            density: 0.001,
-                            friction: 0.5,
+                            restitution: 0.3,
+                            density: 0.0011,
+                            friction: 0.2,
                             frictionAir: 0.02,
                             render: DEBUG_MODE
                                 ? {
@@ -439,17 +443,20 @@
 
                 launch() {
                     Matter.Body.setStatic(this.body, false);
+                    
                     this.applyRandomUpwardForceAndSpin();
                     this.hasLaunched = true;
+                    this.engine.timing.timeScale = 1.4;
                     setTimeout(() => {
-                        if (Math.random() < 1 / this.gameManager.slowOdds) {
+                
+                        if (Math.random() < 1 / slowOdds) {
                             this.gameManager.triggerSlowMotion();
                         }
                     }, 500);
                 }
 
                 applyRandomUpwardForceAndSpin() {
-                    const upwardForceMultiplier = 1.1;
+                    const upwardForceMultiplier = 1;
                     const forceMagnitude = upwardForceMultiplier + Math.random() * 0.05;
                     const horizontalForce = (Math.random() - 0.5) * 0.1;
                     const force = { x: horizontalForce, y: -forceMagnitude };
