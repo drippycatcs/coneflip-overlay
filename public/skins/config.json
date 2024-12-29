@@ -73,7 +73,7 @@
         "name": "rainbow",
         "visuals": "cone_rainbow.webp",
         "canUnbox": true,
-        "unboxWeight": 0.5
+        "unboxWeight": 1
     },
     {
         "name": "darkmatter",
@@ -87,5 +87,12 @@
         "visuals": "holo_iridescent.jpg",
         "canUnbox": true,
         "unboxWeight": 1
+    }
+,
+    {
+        "name": "hologlorp",
+        "visuals": "holo_glorp.webp",
+        "canUnbox": true,
+        "unboxWeight": 5
     }
 ]
