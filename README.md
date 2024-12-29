@@ -156,21 +156,101 @@ Returns the current leaderboard and the top player.
   ```
   3. Change the values accordingly.
       - If you don't want your skin being unboxed by viewers, set `canUnbox` value to `false` and remove the `unboxWeight` field.
-
+      - When you want to add a "HOLO" texture prefix the filename with `holo_`.
 
   ---
 # Built-in skins (list)
 
 ```json
 {
-    "default": "skins/cone_default.png",
-    "gold": "skins/cone_gold.png",
-    "glorp": "skins/cone_glorp.png",
-    "casehardened": "skins/cone_casehardened.png",
-    "inverted": "skins/cone_inverted.png",
-    "negative": "skins/cone_negative.png",
-    "fade": "skins/cone_fade.png",
-    "tigertooth": "skins/cone_tigertooth.png",
-    "comic": "skins/cone_comic.png"
+    {
+        "name": "default",
+        "visuals": "cone_xmas.webp",
+        "canUnbox": false
+    },
+    {
+        "name": "gold",
+        "visuals": "cone_gold.png",
+        "canUnbox": false
+    },
+    {
+        "name": "glorp",
+        "visuals": "cone_glorp.png",
+        "canUnbox": true,
+        "unboxWeight": 40
+    },
+    {
+        "name": "inverted",
+        "visuals": "cone_inverted.png",
+        "canUnbox": true,
+        "unboxWeight": 40
+    },
+    {
+        "name": "poorlydrawn",
+        "visuals": "cone_poorlydrawn.png",
+        "canUnbox": true,
+        "unboxWeight": 40
+    },
+    {
+        "name": "negative",
+        "visuals": "cone_negative.png",
+        "canUnbox": true,
+        "unboxWeight": 20
+    },
+    {
+        "name": "comic",
+        "visuals": "cone_comic.png",
+        "canUnbox": true,
+        "unboxWeight": 20
+    },
+    {
+        "name": "tigertooth",
+        "visuals": "cone_tigertooth.png",
+        "canUnbox": true,
+        "unboxWeight": 10
+    },
+    {
+        "name": "casehardened",
+        "visuals": "cone_casehardened.png",
+        "canUnbox": true,
+        "unboxWeight": 10
+    },
+    {
+        "name": "ahegao",
+        "visuals": "cone_ahegao.png",
+        "canUnbox": true,
+        "unboxWeight": 3
+    },
+    {
+        "name": "fade",
+        "visuals": "cone_fade.png",
+        "canUnbox": true,
+        "unboxWeight": 3
+    },
+    {
+        "name": "printstream",
+        "visuals": "cone_printstream.png",
+        "canUnbox": true,
+        "unboxWeight": 3
+    },
+    {
+        "name": "rainbow",
+        "visuals": "cone_rainbow.webp",
+        "canUnbox": true,
+        "unboxWeight": 0.5
+    },
+    {
+        "name": "darkmatter",
+        "visuals": "holo_darkmatter.jpg",
+        "canUnbox": true,
+        "unboxWeight": 1
+    }
+,
+    {
+        "name": "iridescent",
+        "visuals": "holo_iridescent.jpg",
+        "canUnbox": true,
+        "unboxWeight": 1
+    }
 }
 ```
