@@ -105,10 +105,26 @@
             background: rgba(255, 215, 0, 0.2);
         }
 
-        .golden-cone {
-            width: 20px;
-            vertical-align: middle;
+        .cone_skin {
+       
+            display: block;
+ 
+            width: 50px;
+            height: 50px;
+            background-position: center center;
+            background-size: contain;
+            background-repeat: repeat-y;
+            -webkit-mask-image: url(skins/cone_default.png);
+            mask-image: url(skins/cone_default.png);
+            mask-repeat: no-repeat;
+            mask-size: 60%;
+            -webkit-mask-size: 60%;
+            -webkit-mask-repeat: no-repeat;
+            -webkit-mask-position: center center;
+            mask-position: center center;
+            
             margin-right: 9px;
+
         }
 
         .player-rank {
@@ -118,6 +134,11 @@
 
         .placeholder-row {
             color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .flex_thing{
+            display: flex;
+            align-items: center;
         }
     </style>
 </head>
@@ -144,6 +165,12 @@
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script>
+
+        let userSkinsMap = {};
+
+
+        let skinLibrary = {};
+
         function createTableRows(count) {
             const tbody = document.querySelector("#leaderboard-table tbody");
             tbody.innerHTML = '';
@@ -157,38 +184,90 @@
             }
         }
 
+
         function updateTable(data) {
             createTableRows(25);
+
             const rows = document.querySelectorAll("#leaderboard-table tbody tr");
+
             for (let i = 0; i < rows.length; i++) {
                 const row = rows[i];
+
                 if (data[i]) {
                     const player = data[i];
-                    const isTopPlayer = i === 0;
-                    const goldenConeIcon = isTopPlayer
-                        ? '<img src="skins/cone_gold.png" class="golden-cone">'
-                        : '';
+                    const isTopPlayer = (i === 0);
+
+
+                    const playerName = player.name || '—';
+                    const assignedSkinKey = userSkinsMap[playerName] || 'default';
+
+
+                    let skinIconPath = skinLibrary[assignedSkinKey] || skinLibrary['default'] || '';
+
+                    if (isTopPlayer && skinLibrary['gold']) {
+                        skinIconPath = skinLibrary['gold'];
+                    }
+
+
+                    const skinIcon = `<div style="background-image: url(${skinIconPath})" class="${isTopPlayer ? 'cone_skin' : 'cone_skin'
+                        }"></div>`;
+
+
                     row.innerHTML = `
-                        <td class="player-rank">${isTopPlayer ? goldenConeIcon : i + 1}</td>
-                        <td>${player.name || '—'}</td>
-                        <td>${player.wins || '—'}</td>
-                        <td>${player.fails || '—'}</td>
-                        <td>${player.winrate || '—'}</td>
-                    `;
+                <td class="player-rank">${i + 1}</td>
+                <td class="flex_thing">${skinIcon} ${playerName}</td>
+                <td>${player.wins ?? '—'}</td>
+                <td>${player.fails ?? '—'}</td>
+                <td>${player.winrate ?? '—'}</td>
+              `;
+
+
                     row.className = isTopPlayer ? 'top-player' : '';
                 }
             }
         }
 
-        async function initialize() {
-            const data = await fetch('/api/leaderboard')
-                .then(response => response.json())
-                .then(data => { return data })
-                .catch(error => console.error("Error loading leaderboard:", error));
-            updateTable(data || []);
+
+
+        async function loadUserSkins() {
+            try {
+                const response = await fetch('/api/skins/users');
+                const userSkinsList = await response.json();
+                userSkinsMap = userSkinsList.reduce((map, user) => {
+                    map[user.name] = user.skin;
+                    return map;
+                }, {});
+            } catch (error) {
+                console.error("Error fetching user skins:", error);
+            }
         }
 
-        initialize(); // Populate leaderboard on load
+
+        async function loadSkinLibrary() {
+            try {
+                const response = await fetch('/api/skins/available');
+                skinLibrary = await response.json();
+            } catch (error) {
+                console.error("Error fetching skin library:", error);
+            }
+        }
+
+        async function initialize() {
+
+            await loadSkinLibrary();
+
+
+            await loadUserSkins();
+            try {
+                const response = await fetch('/api/leaderboard');
+                const data = await response.json();
+                updateTable(data || []);
+            } catch (error) {
+                console.error("Error loading leaderboard:", error);
+                updateTable([]);
+            }
+        }
+
 
         let isVisible = false;
         let hideTimeout;
@@ -196,9 +275,11 @@
 
         const socket = io();
 
+
         socket.on('refreshLb', (data) => {
             updateTable(data);
         });
+
 
         socket.on('showLb', () => {
             if (isVisible) return;
@@ -207,13 +288,14 @@
             const wrapper = document.querySelector('.leaderboard-table-wrapper');
 
             wrapper.scrollTop = 0;
-
             leaderboard.classList.add('visible');
             isVisible = true;
+
 
             if (scrollInterval) {
                 clearInterval(scrollInterval);
             }
+
 
             setTimeout(() => {
                 let scrollAmount = 0;
@@ -221,13 +303,16 @@
                     wrapper.scrollTop = scrollAmount;
                     scrollAmount += 2;
 
-                    if (wrapper.scrollTop >= wrapper.scrollHeight - wrapper.clientHeight ||
-                        !leaderboard.classList.contains('visible')) {
+                    if (
+                        wrapper.scrollTop >= wrapper.scrollHeight - wrapper.clientHeight ||
+                        !leaderboard.classList.contains('visible')
+                    ) {
                         clearInterval(scrollInterval);
                         scrollInterval = null;
                     }
                 }, 20);
             }, 1000);
+
 
             clearTimeout(hideTimeout);
             hideTimeout = setTimeout(() => {
@@ -239,7 +324,10 @@
                     scrollInterval = null;
                 }
             }, 15000);
-        })
+        });
+
+
+        initialize();
     </script>
 </body>
 
