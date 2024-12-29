@@ -115,8 +115,9 @@
             mask-repeat: no-repeat;
             -webkit-mask-repeat: no-repeat;
             mask-position: center;
-            background-size: 200%; /* Zoom in so u wont see texture edges as much */
-      
+            background-size: 200%;
+            /* Zoom in so u wont see texture edges as much */
+
         }
     </style>
 </head>
@@ -168,7 +169,7 @@
                     this.socket = io();
                     this.engine = Engine.create();
                     this.world = this.engine.world;
-                    this.world.gravity.y = 1.4;
+                    this.world.gravity.y = 2;
                     this.render = Render.create({
                         canvas: document.getElementById('world'),
                         engine: this.engine,
@@ -206,9 +207,9 @@
                                 fillStyle: 'transparent',
                                 strokeStyle: 'transparent',
                             },
-                            collisionFilter: { group: -1 },
-                            friction: 0.5,
+                            friction: 1,
                             frictionStatic: 1,
+                            isSensor:false, 
                         }
                     );
                     Composite.add(this.world, this.ground);
@@ -292,11 +293,11 @@
                     this.cones = [];
                     this.coneQueue = [];
                     this.positions = [
-                        { x: window.innerWidth / 5, occupied: false },
                         { x: (2 * window.innerWidth) / 5, occupied: false },
+                        { x: (1 * window.innerWidth) / 5, occupied: false },
                         { x: (3 * window.innerWidth) / 5, occupied: false },
                         { x: (4 * window.innerWidth) / 5, occupied: false },
-                        
+
                     ];
 
 
@@ -357,10 +358,10 @@
                 }
 
                 updatePositions() {
-                    this.positions[0].x = window.innerWidth / 5;           // 20% of window width
-this.positions[1].x = (2 * window.innerWidth) / 5;     // 40% of window width
-this.positions[2].x = (3 * window.innerWidth) / 5;     // 60% of window width
-this.positions[3].x = (4 * window.innerWidth) / 5;   
+                    this.positions[0].x = (2 * window.innerWidth) / 5 / 5;           // 20% of window width
+                    this.positions[1].x = (1 * window.innerWidth) / 5;     // 40% of window width
+                    this.positions[2].x = (3 * window.innerWidth) / 5;     // 60% of window width
+                    this.positions[3].x = (4 * window.innerWidth) / 5;
                 }
 
                 removeCone(cone) {
@@ -448,12 +449,12 @@ this.positions[3].x = (4 * window.innerWidth) / 5;
 
                 launch() {
                     Matter.Body.setStatic(this.body, false);
-                    
+
                     this.applyRandomUpwardForceAndSpin();
                     this.hasLaunched = true;
-                    this.engine.timing.timeScale = 1.4;
+               
                     setTimeout(() => {
-                
+
                         if (Math.random() < 1 / slowOdds) {
                             this.gameManager.triggerSlowMotion();
                         }
@@ -461,9 +462,9 @@ this.positions[3].x = (4 * window.innerWidth) / 5;
                 }
 
                 applyRandomUpwardForceAndSpin() {
-                    const upwardForceMultiplier = 1;
-                    const forceMagnitude = upwardForceMultiplier + Math.random() * 0.05;
-                    const horizontalForce = (Math.random() - 0.5) * 0.1;
+                    const upwardForceMultiplier = 1.5;
+                    const forceMagnitude = upwardForceMultiplier + Math.random() * 0.2;
+                    const horizontalForce = ( Math.random() -0.5)  *  0.4;
                     const force = { x: horizontalForce, y: -forceMagnitude };
                     Matter.Body.applyForce(this.body, this.body.position, force);
 
