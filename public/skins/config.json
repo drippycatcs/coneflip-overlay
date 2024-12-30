@@ -77,7 +77,7 @@
     },
     {
         "name": "darkmatter",
-        "visuals": "holo_darkmatter.jpg",
+        "visuals": "holo_darkmatter.webp",
         "canUnbox": true,
         "unboxWeight": 1
     }
