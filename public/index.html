@@ -151,7 +151,7 @@
         (() => {
             const DEBUG_MODE = false;
 
-            const slowOdds = 20; // aka 1 in 20
+            const slowOdds = 25; // aka 1 in 25
             const {
                 Engine,
                 Render,
@@ -294,9 +294,9 @@
                     this.coneQueue = [];
                     this.positions = [
                         { x: (2 * window.innerWidth) / 5, occupied: false },
-                        { x: (1 * window.innerWidth) / 5, occupied: false },
                         { x: (3 * window.innerWidth) / 5, occupied: false },
                         { x: (4 * window.innerWidth) / 5, occupied: false },
+                        { x: (1 * window.innerWidth) / 5, occupied: false },
 
                     ];
 
@@ -358,10 +358,10 @@
                 }
 
                 updatePositions() {
-                    this.positions[0].x = (2 * window.innerWidth) / 5 / 5;           // 20% of window width
-                    this.positions[1].x = (1 * window.innerWidth) / 5;     // 40% of window width
-                    this.positions[2].x = (3 * window.innerWidth) / 5;     // 60% of window width
-                    this.positions[3].x = (4 * window.innerWidth) / 5;
+                    this.positions[0].x = (1 * window.innerWidth) / 5 / 5;           // 20% of window width
+                    this.positions[1].x = (3 * window.innerWidth) / 5;     // 40% of window width
+                    this.positions[2].x = (4 * window.innerWidth) / 5;     // 60% of window width
+                    this.positions[3].x = (2 * window.innerWidth) / 5;
                 }
 
                 removeCone(cone) {
@@ -462,7 +462,7 @@
                 }
 
                 applyRandomUpwardForceAndSpin() {
-                    const upwardForceMultiplier = 1.5;
+                    const upwardForceMultiplier = 1.7;
                     const forceMagnitude = upwardForceMultiplier + Math.random() * 0.2;
                     const horizontalForce = ( Math.random() -0.5)  *  0.4;
                     const force = { x: horizontalForce, y: -forceMagnitude };
