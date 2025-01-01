@@ -127,9 +127,12 @@
 
         }
 
+        .text-center {
+            text-align: center;
+        }
+
         .player-rank {
             color: #94B658;
-            text-align: center;
         }
 
         .placeholder-row {
@@ -150,11 +153,11 @@
             <table id="leaderboard-table">
                 <thead>
                     <tr>
-                        <th>Rank</th>
-                        <th>Player</th>
-                        <th>Ws</th>
-                        <th>Ls</th>
-                        <th>WR (%)</th>
+                        <th class="text-center">#</th>
+                        <th>Name</th>
+                        <th class="text-center">Ws</th>
+                        <th class="text-center">Ls</th>
+                        <th class="text-center">WR%</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -214,11 +217,11 @@
 
 
                     row.innerHTML = `
-                <td class="player-rank">${i + 1}</td>
-                <td class="flex_thing">${skinIcon} ${playerName}</td>
-                <td>${player.wins ?? '—'}</td>
-                <td>${player.fails ?? '—'}</td>
-                <td>${player.winrate ?? '—'}</td>
+                <td class="player-rank text-center">${i + 1}</td>
+                <td class="flex_thing text-center">${skinIcon} ${playerName}</td>
+                <td class="text-center">${player.wins ?? '—'}</td>
+                <td class="text-center">${player.fails ?? '—'}</td>
+                <td class="text-center">${player.winrate ?? '—'}</td>
               `;
 
 
