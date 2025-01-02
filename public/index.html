@@ -194,27 +194,26 @@
                     this.setupEvents();
                     this.updatePlayerSkins();
                 }
-
                 setupGround() {
-                    this.ground = Bodies.rectangle(
-                        window.innerWidth / 2,
-                        window.innerHeight,
-                        window.innerWidth,
-                        20,
+                    this.ground = Matter.Bodies.rectangle(
+                        window.innerWidth / 2, 
+                        window.innerHeight + 10, 
+                        window.innerWidth, 
+                        40, // Increased thickness for better collision accuracy
                         {
-                            isStatic: true,
+                            isStatic: true, 
                             render: {
-                                fillStyle: 'transparent',
+                                fillStyle: 'transparent', 
                                 strokeStyle: 'transparent',
                             },
-                            friction: 1,
+                            friction: 1, 
                             frictionStatic: 1,
-                            isSensor:false, 
+                            isSensor: false, 
                         }
                     );
-                    Composite.add(this.world, this.ground);
-                }
 
+                    Matter.Composite.add(this.world, this.ground);
+                }
                 setupEvents() {
 
                     this.socket.on('addCone', (name) => this.coneManager.addCone(name));
@@ -452,7 +451,7 @@
 
                     this.applyRandomUpwardForceAndSpin();
                     this.hasLaunched = true;
-               
+
                     setTimeout(() => {
 
                         if (Math.random() < 1 / slowOdds) {
@@ -464,7 +463,7 @@
                 applyRandomUpwardForceAndSpin() {
                     const upwardForceMultiplier = 1.63;
                     const forceMagnitude = upwardForceMultiplier + Math.random() * 0.2;
-                    const horizontalForce = ( Math.random() -0.5)  *  0.4;
+                    const horizontalForce = (Math.random() - 0.5) * 0.4;
                     const force = { x: horizontalForce, y: -forceMagnitude };
                     Matter.Body.applyForce(this.body, this.body.position, force);
 
