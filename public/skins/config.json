@@ -1,7 +1,7 @@
 [
     {
         "name": "default",
-        "visuals": "cone_xmas.webp",
+        "visuals": "cone_default.png",
         "canUnbox": false
     },
     {
