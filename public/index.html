@@ -358,7 +358,7 @@
                 }
 
                 updatePositions() {
-                    this.positions[0].x = (1 * window.innerWidth) / 5 / 5;           // 20% of window width
+                    this.positions[0].x = (1 * window.innerWidth) / 5;           // 20% of window width
                     this.positions[1].x = (3 * window.innerWidth) / 5;     // 40% of window width
                     this.positions[2].x = (4 * window.innerWidth) / 5;     // 60% of window width
                     this.positions[3].x = (2 * window.innerWidth) / 5;
@@ -391,7 +391,7 @@
                         coneVertices,
                         {
 
-                            restitution: 0.3,
+                            restitution: 0.2,
                             density: 0.0011,
                             friction: 0.2,
                             frictionAir: 0.02,
