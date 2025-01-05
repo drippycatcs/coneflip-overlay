@@ -93,6 +93,13 @@
         "name": "hologlorp",
         "visuals": "holo_glorp.webp",
         "canUnbox": true,
-        "unboxWeight": 5
+        "unboxWeight": 6
+    }
+,
+    {
+        "name": "alarm",
+        "visuals": "cone_alarm.webp",
+        "canUnbox": true,
+        "unboxWeight": 6
     }
 ]
