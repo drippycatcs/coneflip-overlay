@@ -148,12 +148,28 @@ app.get('/api/skins/users', async (req, res, next) => {
     }
 });
 
-app.get('/api/skins/odds', (req, res, next) => {
-    try {
-        res.send(SkinsManager.calculateSkinOdds());
-    } catch (err) {
-        next(err);
-    }
+app.get('/api/skins/odds', (req, res) => {
+    const oddsData = SkinsManager.calculateSkinOdds();
+    const oddsArray = oddsData
+        .split(', ')
+        .map(item => {
+            const match = item.match(/^(.+)\s\((\d+\.\d+)%\)$/); 
+            return {
+                name: match[1],
+                odds: parseFloat(match[2]) 
+            };
+        });
+
+
+    oddsArray.sort((a, b) => b.odds - a.odds);
+
+
+    const sortedOddsData = oddsArray
+        .map(item => `${item.name} (${item.odds}%)`)
+        .join(', ');
+
+
+    res.send(sortedOddsData);
 });
 
 class LeaderboardManager {
