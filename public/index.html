@@ -115,9 +115,8 @@
             mask-repeat: no-repeat;
             -webkit-mask-repeat: no-repeat;
             mask-position: center;
-            background-size: 200%;
-            /* Zoom in so u wont see texture edges as much */
-
+            background-size: 400%;
+            transition: opacity 0.5s ease;
         }
     </style>
 </head>
@@ -151,7 +150,7 @@
         (() => {
             const DEBUG_MODE = false;
 
-            const slowOdds = 25; // aka 1 in 25
+            const slowOdds = 30;
             const {
                 Engine,
                 Render,
@@ -196,19 +195,19 @@
                 }
                 setupGround() {
                     this.ground = Matter.Bodies.rectangle(
-                        window.innerWidth / 2, 
-                        window.innerHeight + 10, 
-                        window.innerWidth, 
+                        window.innerWidth / 2,
+                        window.innerHeight + 10,
+                        window.innerWidth,
                         40, // Increased thickness for better collision accuracy
                         {
-                            isStatic: true, 
+                            isStatic: true,
                             render: {
-                                fillStyle: 'transparent', 
+                                fillStyle: 'transparent',
                                 strokeStyle: 'transparent',
                             },
-                            friction: 1, 
+                            friction: 1,
                             frictionStatic: 1,
-                            isSensor: false, 
+                            isSensor: false,
                         }
                     );
 
@@ -410,40 +409,28 @@
                     Matter.Composite.add(this.world, this.body);
 
 
+                    this.nameElement = document.createElement('span');
+                    this.nameElement.textContent = name;
+                    this.nameElement.className = 'userName';
+                    document.body.appendChild(this.nameElement);
+
                     if (texture.includes("holo_")) {
                         this.overlay = document.createElement('img');
                         this.overlay.src = 'skins/transparent.png';
                         this.overlay.className = 'cone';
-                        this.element = document.createElement('div');
 
+                        this.element = document.createElement('div');
                         this.element.className = 'cone_holo';
                         this.element.style.backgroundImage = `url(${texture})`;
-                        document.body.appendChild(this.element);
-
-                        this.nameElement = document.createElement('span');
-                        this.nameElement.textContent = name;
-                        this.nameElement.className = 'userName';
-                        document.body.appendChild(this.nameElement);
                         this.element.appendChild(this.overlay);
-                        this.updateNameLabelPosition();
                     } else {
-
                         this.element = document.createElement('img');
                         this.element.src = texture;
                         this.element.className = 'cone';
-                        document.body.appendChild(this.element);
-
-                        this.nameElement = document.createElement('span');
-                        this.nameElement.textContent = name;
-                        this.nameElement.className = 'userName';
-                        document.body.appendChild(this.nameElement);
-
-                        this.updateNameLabelPosition();
                     }
 
-
-
-
+                    document.body.appendChild(this.element);
+                    this.updateNameLabelPosition();
                 }
 
                 launch() {

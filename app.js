@@ -157,28 +157,12 @@ app.get('/api/skins/users', async (req, res, next) => {
     }
 });
 
-app.get('/api/skins/odds', (req, res) => {
-    const oddsData = SkinsManager.calculateSkinOdds();
-    const oddsArray = oddsData
-        .split(', ')
-        .map(item => {
-            const match = item.match(/^(.+)\s\((\d+\.\d+)%\)$/); 
-            return {
-                name: match[1],
-                odds: parseFloat(match[2]) 
-            };
-        });
-
-
-    oddsArray.sort((a, b) => b.odds - a.odds);
-
-
-    const sortedOddsData = oddsArray
-        .map(item => `${item.name} (${item.odds}%)`)
-        .join(', ');
-
-
-    res.send(sortedOddsData);
+app.get('/api/skins/odds', (req, res, next) => {
+    try {
+        res.send(SkinsManager.calculateSkinOdds());
+    } catch (err) {
+        next(err);
+    }
 });
 
 class LeaderboardManager {
@@ -396,6 +380,7 @@ class SkinsManager {
         const skinsAvailableToUnbox = this.getSkinsAvailableToUnbox();
         const totalWeight = skinsAvailableToUnbox.reduce((sum, skin) => sum + skin.unboxWeight, 0);
         return skinsAvailableToUnbox
+            .sort((a, b) => b.unboxWeight - a.unboxWeight)
             .map(
                 (skin) => `${skin.name} (${((skin.unboxWeight / totalWeight) * 100).toFixed(1)}%)`
             )
