@@ -58,6 +58,15 @@ app.get('/api/cones/add', (req, res) => {
     res.sendStatus(200);
 });
 
+app.get('/api/cones/duel', (req, res) => {
+    const name = req.query.name?.toLowerCase().trim() || '';
+    const name2 = req.query.duel?.toLowerCase().trim() || '';
+    if (!name) return res.status(400).send('Name cannot be blank or invalid.');
+    io.emit('addCone', name);
+    io.emit('addCone', name2);
+    res.sendStatus(200);
+});
+
 app.get('/api/leaderboard', async (req, res, next) => {
     const name = req.query.name?.toLowerCase().trim() || '';
     const show = req.query.show === 'true';
