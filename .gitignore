@@ -136,3 +136,6 @@ data/leaderboard.db
 data/skins.db
 .DS_Store
 sqlite browser
+
+
+debug

@@ -5,6 +5,14 @@ const Database = require('better-sqlite3');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
+const axios = require('axios');
+require('dotenv').config();
+
+
+const CLIENT_ID = process.env.TWITCH_CLIENT_ID;
+const ACCESS_TOKEN = process.env.TWITCH_ACCESS_TOKEN;
+
+
 
 /**
  * @typedef {{name: string, visuals: string, canUnbox: boolean, unboxWeight?: number}} Skin
@@ -40,7 +48,7 @@ app.use(express.static(CONFIG.PATHS.PUBLIC));
 app.use(errorHandler);
 
 app.get('/', (req, res) => {
-    /// Just to be sure
+    // Disable caching
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -51,11 +59,88 @@ app.get('/leaderboard', (req, res) => {
     res.sendFile(path.join(CONFIG.PATHS.PUBLIC, 'leaderboard.html'));
 });
 
-app.get('/api/cones/add', (req, res) => {
+// Function to fetch Twitch ID for a given username
+async function getTwitchId(username) {
+    const apiURL = 'https://api.twitch.tv/helix/users';
+    try {
+        const response = await axios.get(apiURL, {
+            headers: {
+                'Client-ID': CLIENT_ID,
+                'Authorization': `Bearer ${ACCESS_TOKEN}`,
+            },
+            params: {
+                login: username,
+            },
+        });
+
+        const user = response.data.data[0];
+        if (user) {
+            console.log(`Fetched Twitch ID for ${username}: ${user.id}`);
+            return user.id;
+        } else {
+            console.warn(`User "${username}" not found on Twitch.`);
+            return null;
+        }
+    } catch (error) {
+        console.error(`Error fetching Twitch ID for ${username}:`, error.response?.data || error.message);
+        return null;
+    }
+}
+
+
+
+
+
+app.get('/api/cones/add', async (req, res) => {
     const name = req.query.name?.toLowerCase().trim() || '';
     if (!name) return res.status(400).send('Name cannot be blank or invalid.');
-    io.emit('addCone', name);
-    res.sendStatus(200);
+
+    try {
+    
+        const stmt = LeaderboardManager.db.prepare('SELECT * FROM leaderboard WHERE name = ?');
+        const player = stmt.get(name);
+
+        if (!player) {
+
+            const twitchId = await getTwitchId(name); 
+
+            if(!twitchId) {
+                return res.status(404).send('Twitch ID not found for the given name.');
+
+            }
+
+            const twidStmt = LeaderboardManager.db.prepare('SELECT * FROM leaderboard WHERE twitchid = ?');
+            const twidPlayer = twidStmt.get(twitchId);
+     
+
+            if (twidPlayer) {
+                LeaderboardManager.db
+                    .prepare(`UPDATE leaderboard SET name = ? WHERE twitchid = ?`)
+                    .run(name, twitchId);
+
+                    SkinsManager.db
+                    .prepare(`UPDATE user_skins SET name = ? WHERE twitchid = ?`)
+                    .run(name, twitchId);
+            } else {
+                console.log('Twitch ID player not found in database');
+                console.log(`Inserting new player into leaderboard for Twitch ID: ${twitchId}`);
+                LeaderboardManager.db
+                    .prepare(
+                        `INSERT INTO leaderboard (name, twitchid, wins, fails, winrate)
+                         VALUES (?, ?, ?, ?, ?)`
+                    )
+                    .run(name, twitchId, 0, 0, 0.0);
+
+
+            }
+        } 
+
+        io.emit('addCone', name);
+        res.sendStatus(200);
+    } catch (error) {
+        console.error(`Error while adding cone: ${error.message}`);
+        res.status(500).send('Internal Server Error');
+    }
 });
 
 app.get('/api/cones/duel', (req, res) => {
@@ -80,11 +165,13 @@ app.get('/api/leaderboard', async (req, res, next) => {
         if (name) {
             let result;
             const data = await LeaderboardManager.getPlayer(name);
-            if (data.hasPlayed)
+            if (data.hasPlayed) {
                 result = `${name} cone stats: ${data.rank} (Ws: ${data.wins} / Ls: ${data.fails} / WR%: ${data.winrate.toFixed(
                     2
                 )})`;
-            else result = `${name} never tried coneflipping.`;
+            } else {
+                result = `${name} never tried coneflipping.`;
+            }
             return res.send(result);
         }
 
@@ -173,13 +260,16 @@ class LeaderboardManager {
 
     static db = new Database(CONFIG.PATHS.LEADERBOARD_DB);
 
+
     static initialize() {
+
         this.db.prepare(
             `CREATE TABLE IF NOT EXISTS leaderboard (
                 name TEXT PRIMARY KEY,
                 wins INTEGER NOT NULL DEFAULT 0,
                 fails INTEGER NOT NULL DEFAULT 0,
-                winrate REAL NOT NULL DEFAULT 0.0
+                winrate REAL NOT NULL DEFAULT 0.0,
+                twitchid TEXT NOT NULL
             )`
         ).run();
     }
@@ -204,8 +294,8 @@ class LeaderboardManager {
         return [...data].sort((a, b) => {
             if (b.wins !== a.wins) return b.wins - a.wins; // We sort by descending wins
             if (a.wins > 0) return b.winrate - a.winrate; // Then by winrate
-            if (a.fails !== b.fails) return a.fails - b.fails; // After we sort by ascending fails
-            return a.name.localeCompare(b.name); // Finally we do alphabetical
+            if (a.fails !== b.fails) return a.fails - b.fails; // Then ascending fails
+            return a.name.localeCompare(b.name); // Finally alphabetical
         });
     }
 
@@ -266,7 +356,7 @@ class LeaderboardManager {
             const wins = isWin ? 1 : 0;
             const fails = isWin ? 0 : 1;
             const totalGames = wins + fails;
-            const winrate = ((wins / (totalGames)) * 100).toFixed(2);
+            const winrate = ((wins / totalGames) * 100).toFixed(2);
 
             this.db
                 .prepare('INSERT INTO leaderboard (name, wins, fails, winrate) VALUES (?, ?, ?, ?)')
@@ -286,7 +376,6 @@ class SkinsManager {
     static db = new Database(CONFIG.PATHS.SKINS_DB);
 
     static async initialize() {
-
         this.db.prepare(
             `CREATE TABLE IF NOT EXISTS skins (
                 name TEXT PRIMARY KEY,
@@ -296,13 +385,14 @@ class SkinsManager {
             )`
         ).run();
 
+      
         this.db.prepare(
             `CREATE TABLE IF NOT EXISTS user_skins (
                 name TEXT PRIMARY KEY,
-                skin TEXT NOT NULL
+                skin TEXT NOT NULL,
+                twitchid TEXT NOT NULL
             )`
         ).run();
-
 
         await this.loadConfiguredSkins();
     }
@@ -311,7 +401,7 @@ class SkinsManager {
         const data = await fs.readFile(CONFIG.PATHS.SKINS_CONFIG);
         const skinsConfig = JSON.parse(data);
 
-
+        // Clear the skins table before loading
         this.db.prepare('DELETE FROM skins').run();
 
         const insertStmt = this.db.prepare(
@@ -332,7 +422,6 @@ class SkinsManager {
         insertMany(skinsConfig);
 
         const skins = this.db.prepare('SELECT * FROM skins').all();
-
         this.availableSkins = {};
         skins.forEach((skin) => {
             this.availableSkins[skin.name] = skin;
@@ -353,8 +442,9 @@ class SkinsManager {
             throw new Error('Invalid skin.');
         }
 
+        // Insert or replace user skin
         this.db
-            .prepare('INSERT OR REPLACE INTO user_skins (name, skin) VALUES (?, ?)')
+            .prepare('INSERT OR REPLACE INTO user_skins (name, skin, twitchid) VALUES (?, ?, "")')
             .run(name, skin);
 
         return `Skin for ${name} updated to ${skin}.`;
@@ -395,6 +485,7 @@ class SkinsManager {
     }
 }
 
+// Socket.io connection logic
 io.on('connection', async (socket) => {
     let topPlayer = null;
 
@@ -428,6 +519,7 @@ io.on('connection', async (socket) => {
     }
 });
 
+// Start the server
 async function startServer() {
     try {
         await Promise.all([LeaderboardManager.initialize(), SkinsManager.initialize()]);
