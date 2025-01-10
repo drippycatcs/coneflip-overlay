@@ -8,12 +8,6 @@ const io = require('socket.io')(http);
 const axios = require('axios');
 require('dotenv').config();
 
-
-const CLIENT_ID = process.env.TWITCH_CLIENT_ID;
-const ACCESS_TOKEN = process.env.TWITCH_ACCESS_TOKEN;
-
-
-
 /**
  * @typedef {{name: string, visuals: string, canUnbox: boolean, unboxWeight?: number}} Skin
  */
@@ -34,6 +28,11 @@ const CONFIG = {
         LEADERBOARD_DB: path.join(__dirname, 'data', 'leaderboard.db'),
         SKINS_CONFIG: path.join(__dirname, 'public', 'skins', 'config.json'),
     },
+    TWITCH: {
+        API: 'https://api.twitch.tv/helix/users',
+        CLIENT_ID: process.env.TWITCH_CLIENT_ID,
+        ACCESS_TOKEN: process.env.TWITCH_ACCESS_TOKEN,
+    },
     CACHE_DURATION: 5000,
 };
 
@@ -47,110 +46,77 @@ const errorHandler = (err, req, res, next) => {
 app.use(express.static(CONFIG.PATHS.PUBLIC));
 app.use(errorHandler);
 
-app.get('/', (req, res) => {
-    // Disable caching
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.sendFile(path.join(CONFIG.PATHS.PUBLIC, 'index.html'));
-});
-
-app.get('/leaderboard', (req, res) => {
-    res.sendFile(path.join(CONFIG.PATHS.PUBLIC, 'leaderboard.html'));
-});
-
-// Function to fetch Twitch ID for a given username
-async function getTwitchId(username) {
-    const apiURL = 'https://api.twitch.tv/helix/users';
+app.get('/', (req, res, next) => {
     try {
-        const response = await axios.get(apiURL, {
-            headers: {
-                'Client-ID': CLIENT_ID,
-                'Authorization': `Bearer ${ACCESS_TOKEN}`,
-            },
-            params: {
-                login: username,
-            },
-        });
-
-        const user = response.data.data[0];
-        if (user) {
-            console.log(`Fetched Twitch ID for ${username}: ${user.id}`);
-            return user.id;
-        } else {
-            console.warn(`User "${username}" not found on Twitch.`);
-            return null;
-        }
-    } catch (error) {
-        console.error(`Error fetching Twitch ID for ${username}:`, error.response?.data || error.message);
-        return null;
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+        res.sendFile(path.join(CONFIG.PATHS.PUBLIC, 'index.html'));
+    } catch (err) {
+        next(err);
     }
-}
+});
 
+app.get('/leaderboard', (req, res, next) => {
+    try {
+        res.sendFile(path.join(CONFIG.PATHS.PUBLIC, 'leaderboard.html'));
+    } catch (err) {
+        next(err);
+    }
+});
 
-
-
-
-app.get('/api/cones/add', async (req, res) => {
+app.get('/api/cones/add', async (req, res, next) => {
     const name = req.query.name?.toLowerCase().trim() || '';
     if (!name) return res.status(400).send('Name cannot be blank or invalid.');
 
     try {
-    
         const stmt = LeaderboardManager.db.prepare('SELECT * FROM leaderboard WHERE name = ?');
         const player = stmt.get(name);
 
         if (!player) {
 
-            const twitchId = await getTwitchId(name); 
+            const twitchId = await getTwitchId(name);
 
-            if(!twitchId) {
+            if (!twitchId) {
                 return res.status(404).send('Twitch ID not found for the given name.');
-
             }
 
             const twidStmt = LeaderboardManager.db.prepare('SELECT * FROM leaderboard WHERE twitchid = ?');
             const twidPlayer = twidStmt.get(twitchId);
-     
 
             if (twidPlayer) {
                 LeaderboardManager.db
                     .prepare(`UPDATE leaderboard SET name = ? WHERE twitchid = ?`)
                     .run(name, twitchId);
 
-                    SkinsManager.db
+                SkinsManager.db
                     .prepare(`UPDATE user_skins SET name = ? WHERE twitchid = ?`)
                     .run(name, twitchId);
             } else {
-                console.log('Twitch ID player not found in database');
-                console.log(`Inserting new player into leaderboard for Twitch ID: ${twitchId}`);
                 LeaderboardManager.db
                     .prepare(
                         `INSERT INTO leaderboard (name, twitchid, wins, fails, winrate)
                          VALUES (?, ?, ?, ?, ?)`
                     )
                     .run(name, twitchId, 0, 0, 0.0);
-
-
             }
-        } 
+        }
 
         io.emit('addCone', name);
         res.sendStatus(200);
-    } catch (error) {
-        console.error(`Error while adding cone: ${error.message}`);
-        res.status(500).send('Internal Server Error');
+    } catch (err) {
+        next(err);
     }
 });
 
-app.get('/api/cones/duel', (req, res) => {
-    const name = req.query.name?.toLowerCase().trim() || '';
-    const name2 = req.query.duel?.toLowerCase().trim() || '';
-    if (!name) return res.status(400).send('Name cannot be blank or invalid.');
-    io.emit('addCone', name);
-    io.emit('addCone', name2);
-    res.sendStatus(200);
-});
+// app.get('/api/cones/duel', (req, res) => {
+//     const name = req.query.name?.toLowerCase().trim() || '';
+//     const name2 = req.query.duel?.toLowerCase().trim() || '';
+//     if (!name) return res.status(400).send('Name cannot be blank or invalid.');
+//     io.emit('addCone', name);
+//     io.emit('addCone', name2);
+//     res.sendStatus(200);
+// });
 
 app.get('/api/leaderboard', async (req, res, next) => {
     const name = req.query.name?.toLowerCase().trim() || '';
@@ -252,6 +218,30 @@ app.get('/api/skins/odds', (req, res, next) => {
     }
 });
 
+async function getTwitchId(username) {
+    try {
+        const response = await axios.get(CONFIG.TWITCH.API, {
+            headers: {
+                'Client-ID': CONFIG.TWITCH.CLIENT_ID,
+                'Authorization': `Bearer ${CONFIG.TWITCH.ACCESS_TOKEN}`,
+            },
+            params: {
+                login: username,
+            },
+        });
+
+        const user = response.data.data[0];
+        if (user) {
+            return user.id;
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.error(`Error fetching Twitch ID for ${username}:`, error.response?.data || error.message);
+        return null;
+    }
+}
+
 class LeaderboardManager {
     static cache = {
         data: null,
@@ -292,10 +282,10 @@ class LeaderboardManager {
 
     static sortLeaderboard(data) {
         return [...data].sort((a, b) => {
-            if (b.wins !== a.wins) return b.wins - a.wins; // We sort by descending wins
-            if (a.wins > 0) return b.winrate - a.winrate; // Then by winrate
-            if (a.fails !== b.fails) return a.fails - b.fails; // Then ascending fails
-            return a.name.localeCompare(b.name); // Finally alphabetical
+            if (b.wins !== a.wins) return b.wins - a.wins;
+            if (a.wins > 0) return b.winrate - a.winrate;
+            if (a.fails !== b.fails) return a.fails - b.fails;
+            return a.name.localeCompare(b.name);
         });
     }
 
@@ -385,7 +375,6 @@ class SkinsManager {
             )`
         ).run();
 
-      
         this.db.prepare(
             `CREATE TABLE IF NOT EXISTS user_skins (
                 name TEXT PRIMARY KEY,
@@ -401,7 +390,6 @@ class SkinsManager {
         const data = await fs.readFile(CONFIG.PATHS.SKINS_CONFIG);
         const skinsConfig = JSON.parse(data);
 
-        // Clear the skins table before loading
         this.db.prepare('DELETE FROM skins').run();
 
         const insertStmt = this.db.prepare(
@@ -442,7 +430,6 @@ class SkinsManager {
             throw new Error('Invalid skin.');
         }
 
-        // Insert or replace user skin
         this.db
             .prepare('INSERT OR REPLACE INTO user_skins (name, skin, twitchid) VALUES (?, ?, "")')
             .run(name, skin);
@@ -485,7 +472,6 @@ class SkinsManager {
     }
 }
 
-// Socket.io connection logic
 io.on('connection', async (socket) => {
     let topPlayer = null;
 
@@ -519,7 +505,6 @@ io.on('connection', async (socket) => {
     }
 });
 
-// Start the server
 async function startServer() {
     try {
         await Promise.all([LeaderboardManager.initialize(), SkinsManager.initialize()]);
