@@ -38,9 +38,7 @@ const CONFIG = {
 
 const errorHandler = (err, req, res, next) => {
     console.error('Error:', err);
-    res
-        .status(err.status || 500)
-        .json({ error: err.message || 'Internal Server Error' });
+    res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
 };
 
 app.use(express.static(CONFIG.PATHS.PUBLIC));
@@ -172,34 +170,28 @@ app.get('/api/skins/available', async (req, res, next) => {
     }
 });
 
-
-
 app.get('/api/skins/inventory', async (req, res, next) => {
     const name = req.query.name?.toLowerCase().trim() || '';
-    if (!name) return res.status(400).json('Name must be provided.');
+    if (!name) return res.status(400).send('Name must be provided.');
 
     try {
         const stmt = SkinsManager.db.prepare('SELECT inventory FROM user_skins WHERE name = ?');
         const user = stmt.get(name);
 
-        if (!user) {
-            return res.status(404).json(`User with name "${name}" not found.`);
-        }
+        if (!user) return res.status(404).send(`${name} doesn't have any skins.`);
 
-
-        res.status(200).send(user.inventory);
+        res.status(200).send(`${name} owns the following skins: ${user.inventory.split(',').join(', ')}.`);
     } catch (err) {
         next(err);
     }
-}
-);
+});
 
 app.get('/api/skins/set', async (req, res, next) => {
     const name = req.query.name?.toLowerCase().trim() || '';
     const skin = req.query.skin?.toLowerCase().trim() || '';
     const random = req.query.random === 'true';
 
-    if (!name) return res.status(400).json('Name must be provided.');
+    if (!name) return res.status(400).send('Name must be provided.');
 
     try {
         let result;
@@ -207,18 +199,13 @@ app.get('/api/skins/set', async (req, res, next) => {
         if (random) {
             result = await SkinsManager.setRandomSkin(name);
         } else {
-            if (!skin) {
-                return res
-                    .status(400)
-                    .json({ error: 'Skin must be provided when random is false.' });
-            }
+            if (!skin) return res.status(400).send('Skin must be provided.');
             result = await SkinsManager.setSkin(name, skin);
         }
 
         res.send(result);
         io.emit('skinRefresh');
     } catch (err) {
-        err.status = err.message.includes('Invalid skin') ? 400 : 500;
         next(err);
     }
 });
@@ -227,25 +214,18 @@ app.get('/api/skins/swapskin', async (req, res, next) => {
     const name = req.query.name?.toLowerCase().trim() || '';
     const skin = req.query.skin?.toLowerCase().trim() || '';
 
-    if (!name) {
-        return res.status(400).json('Name must be provided.');
-    }
+    if (!name) return res.status(400).send('Name must be provided.');
+    if (!skin) return res.status(400).send('Skin must be provided.');
 
     try {
-       
         const stmt = SkinsManager.db.prepare('SELECT inventory, skin FROM user_skins WHERE name = ?');
         const user = stmt.get(name);
 
-        if (!user) {
-            return res.status(404).json(`User with name "${name}" not found.`);
-        }
+        if (!user) return res.status(404).send(`${name} doesn't have any skins.`);
 
-  
         const inventory = user.inventory ? user.inventory.split(',') : [];
 
-    
         if (inventory.includes(skin)) {
-       
             SkinsManager.db
                 .prepare('UPDATE user_skins SET skin = ? WHERE name = ?')
                 .run(skin, name);
@@ -253,17 +233,12 @@ app.get('/api/skins/swapskin', async (req, res, next) => {
             io.emit('skinRefresh');
             return res.send(`Swapped ${name}'s skin to ${skin}`);
         } else {
-         
-            return res.status(400).json('The provided skin is not in the user\'s inventory.');
+            return res.status(404).send(`${name} doesn't own this skin WeirdChamp`)
         }
     } catch (err) {
-       
-        err.status = err.message.includes('Invalid skin') ? 400 : 500;
         next(err);
     }
 });
-
-
 
 app.get('/api/skins/users', async (req, res, next) => {
     try {
@@ -313,7 +288,6 @@ class LeaderboardManager {
     };
 
     static db = new Database(CONFIG.PATHS.LEADERBOARD_DB);
-
 
     static initialize() {
 
@@ -495,40 +469,35 @@ class SkinsManager {
         if (!this.isValidSkin(skin)) {
             throw new Error('Invalid skin.');
         }
-    
-   
+
         const stmt = this.db.prepare('SELECT inventory FROM user_skins WHERE name = ?');
         const user = stmt.get(name);
-    
+
         let inventory = [];
-    
+
         if (user) {
-           
             inventory = user.inventory ? user.inventory.split(',') : [];
         }
-    
-   
+
         if (!inventory.includes(skin)) {
             inventory.push(skin);
         }
-    
+
         const updatedInventory = inventory.join(',');
-    
+
         if (user) {
-            
             this.db
                 .prepare('UPDATE user_skins SET inventory = ?, skin = ? WHERE name = ?')
                 .run(updatedInventory, skin, name);
         } else {
-           
+            const twitchid = await getTwitchId(name);
             this.db
                 .prepare('INSERT INTO user_skins (name, skin, inventory, twitchid) VALUES (?, ?, ?, ?)')
-                .run(name, skin, updatedInventory, ''); 
+                .run(name, skin, updatedInventory, twitchid);
         }
-    
+
         return `Skin for ${name} updated to ${skin}.`;
     }
-    
 
     static async setRandomSkin(name) {
         const skinsAvailableToUnbox = this.getSkinsAvailableToUnbox();
