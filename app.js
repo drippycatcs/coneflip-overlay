@@ -65,7 +65,7 @@ app.get('/leaderboard', (req, res, next) => {
 
 app.get('/api/cones/add', async (req, res, next) => {
     const name = req.query.name?.toLowerCase().trim() || '';
-    if (!name) return res.status(400).send('Name cannot be blank or invalid.');
+    if (!name) return res.send('Name cannot be blank or invalid.');
 
     try {
         const stmt = LeaderboardManager.db.prepare('SELECT * FROM leaderboard WHERE name = ?');
@@ -76,7 +76,7 @@ app.get('/api/cones/add', async (req, res, next) => {
             const twitchId = await getTwitchId(name);
 
             if (!twitchId) {
-                return res.status(404).send('Twitch ID not found for the given name.');
+                return res.send('Twitch ID not found for the given name.');
             }
 
             const twidStmt = LeaderboardManager.db.prepare('SELECT * FROM leaderboard WHERE twitchid = ?');
@@ -110,7 +110,7 @@ app.get('/api/cones/add', async (req, res, next) => {
 // app.get('/api/cones/duel', (req, res) => {
 //     const name = req.query.name?.toLowerCase().trim() || '';
 //     const name2 = req.query.duel?.toLowerCase().trim() || '';
-//     if (!name) return res.status(400).send('Name cannot be blank or invalid.');
+//     if (!name) return res.send('Name cannot be blank or invalid.');
 //     io.emit('addCone', name);
 //     io.emit('addCone', name2);
 //     res.sendStatus(200);
@@ -172,13 +172,13 @@ app.get('/api/skins/available', async (req, res, next) => {
 
 app.get('/api/skins/inventory', async (req, res, next) => {
     const name = req.query.name?.toLowerCase().trim() || '';
-    if (!name) return res.status(400).send('Name must be provided.');
+    if (!name) return res.send('Name must be provided.');
 
     try {
         const stmt = SkinsManager.db.prepare('SELECT * FROM user_skins WHERE name = ?');
         const user = stmt.get(name);
 
-        if (!user) return res.status(404).send(`${name} doesn't have any skins.`);
+        if (!user) return res.send(`${name} doesn't have any skins.`);
 
         res.status(200).send(`${name} owns the following skins: ${user.inventory.split(',').join(', ')}. | Currently selected: ${user.skin}`);
     } catch (err) {
@@ -191,7 +191,7 @@ app.get('/api/skins/set', async (req, res, next) => {
     const skin = req.query.skin?.toLowerCase().trim() || '';
     const random = req.query.random === 'true';
 
-    if (!name) return res.status(400).send('Name must be provided.');
+    if (!name) return res.send('Name must be provided.');
 
     try {
         let result;
@@ -199,7 +199,7 @@ app.get('/api/skins/set', async (req, res, next) => {
         if (random) {
             result = await SkinsManager.setRandomSkin(name);
         } else {
-            if (!skin) return res.status(400).send('Skin must be provided.');
+            if (!skin) return res.send('Skin must be provided.');
             result = await SkinsManager.setSkin(name, skin);
         }
 
@@ -214,14 +214,14 @@ app.get('/api/skins/swapskin', async (req, res, next) => {
     const name = req.query.name?.toLowerCase().trim() || '';
     const skin = req.query.skin?.toLowerCase().trim() || '';
 
-    if (!name) return res.status(400).send('Name must be provided.');
-    if (!skin) return res.status(400).send('Skin must be provided.');
+    if (!name) return res.send('Name must be provided.');
+    if (!skin) return res.send('Skin must be provided.');
 
     try {
         const stmt = SkinsManager.db.prepare('SELECT inventory, skin FROM user_skins WHERE name = ?');
         const user = stmt.get(name);
 
-        if (!user) return res.status(404).send(`${name} doesn't have any skins.`);
+        if (!user) return res.send(`${name} doesn't have any skins.`);
 
         const inventory = user.inventory ? user.inventory.split(',') : [];
 
@@ -233,7 +233,7 @@ app.get('/api/skins/swapskin', async (req, res, next) => {
             io.emit('skinRefresh');
             return res.send(`Swapped ${name}'s skin to ${skin}`);
         } else {
-            return res.status(404).send(`${name} doesn't own this skin WeirdChamp`)
+            return res.send(`${name} doesn't own this skin WeirdChamp`)
         }
     } catch (err) {
         next(err);
