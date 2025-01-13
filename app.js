@@ -178,7 +178,7 @@ app.get('/api/skins/inventory', async (req, res, next) => {
         const stmt = SkinsManager.db.prepare('SELECT * FROM user_skins WHERE name = ?');
         const user = stmt.get(name);
 
-        if (!user) return res.send(`${name} doesn't have any skins.`);
+        if (!user) return res.send(`${name}  owns the following skins: default | Currently selected: default`);
 
         res.status(200).send(`${name} owns the following skins: ${ `${user.inventory},default`(',').join(', ')}, default. | Currently selected: ${user.skin}`);
     } catch (err) {
