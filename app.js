@@ -508,9 +508,31 @@ class SkinsManager {
         for (const skin of skinsAvailableToUnbox) {
             currentWeight += skin.unboxWeight;
             if (random <= currentWeight) {
-                await this.setSkin(name, skin.name);
+
                 const odds = ((skin.unboxWeight / totalWeight) * 100).toFixed(1);
-                return `${name} unboxed "${skin.name}" skin (${odds}%).`;
+
+                const stmt = this.db.prepare('SELECT inventory FROM user_skins WHERE name = ?');
+                const user = stmt.get(name);
+
+                let inventory = [];
+
+                if (user) {
+                    inventory = user.inventory
+                        ? user.inventory.split(',').map(skin => skin.trim())
+                        : [];
+                }
+
+
+
+                if (inventory.includes(skin.name)) {
+
+                    return `${name} unboxed "${skin.name}" ... again GAGAGA better luck next time.`;
+                } else {
+                    await this.setSkin(name, skin.name);
+                    return `${name} unboxed "${skin.name}" skin (${odds}%).`;
+                }
+
+
             }
         }
     }
