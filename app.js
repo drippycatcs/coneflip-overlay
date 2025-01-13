@@ -175,12 +175,12 @@ app.get('/api/skins/inventory', async (req, res, next) => {
     if (!name) return res.status(400).send('Name must be provided.');
 
     try {
-        const stmt = SkinsManager.db.prepare('SELECT inventory FROM user_skins WHERE name = ?');
+        const stmt = SkinsManager.db.prepare('SELECT * FROM user_skins WHERE name = ?');
         const user = stmt.get(name);
 
         if (!user) return res.status(404).send(`${name} doesn't have any skins.`);
 
-        res.status(200).send(`${name} owns the following skins: ${user.inventory.split(',').join(', ')}.`);
+        res.status(200).send(`${name} owns the following skins: ${user.inventory.split(',').join(', ')}. | Currently selected: ${user.skin}`);
     } catch (err) {
         next(err);
     }
