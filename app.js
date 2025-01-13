@@ -180,8 +180,7 @@ app.get('/api/skins/inventory', async (req, res, next) => {
 
         if (!user) return res.send(`${name} doesn't have any skins.`);
 
-        res.status(200).send(`${name} owns the following skins: ${`${user.inventory},default`.split(',').map(item => item.trim()).filter((item, index, self) => self.indexOf(item) === index).join(', ')}. | Currently selected: ${user.skin}`);
-
+        res.status(200).send(`${name} owns the following skins: ${ `${user.inventory},default`(',').join(', ')}, default. | Currently selected: ${user.skin}`);
     } catch (err) {
         next(err);
     }
