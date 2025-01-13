@@ -180,7 +180,8 @@ app.get('/api/skins/inventory', async (req, res, next) => {
 
         if (!user) return res.send(`${name} doesn't have any skins.`);
 
-        res.status(200).send(`${name} owns the following skins: ${user.inventory.split(',').join(', ')}. | Currently selected: ${user.skin}`);
+        res.status(200).send(`${name} owns the following skins: ${`${user.inventory},default`.split(',').map(item => item.trim()).filter((item, index, self) => self.indexOf(item) === index).join(', ')}. | Currently selected: ${user.skin}`);
+
     } catch (err) {
         next(err);
     }
@@ -225,7 +226,7 @@ app.get('/api/skins/swapskin', async (req, res, next) => {
 
         const inventory = user.inventory ? user.inventory.split(',') : [];
 
-        if (inventory.includes(skin)) {
+        if (inventory.includes(skin) || skin === 'default') {
             SkinsManager.db
                 .prepare('UPDATE user_skins SET skin = ? WHERE name = ?')
                 .run(skin, name);
