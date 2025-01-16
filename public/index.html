@@ -661,8 +661,9 @@
 
                     
                     const baseSpin = Math.random() * 0.3; 
+                    const baseSpin2 = Math.random() * 0.3; 
                     const spinA = baseSpin * (Math.random() > 0.5 ? 1 : -1) * pushStrength;
-                    const spinB = baseSpin * (Math.random() > 0.5 ? 1 : -1) * pushStrength2;
+                    const spinB = baseSpin2 * (Math.random() > 0.5 ? 1 : -1) * pushStrength2;
 
                     Body.setAngularVelocity(bodyA, spinA);
                     Body.setAngularVelocity(bodyB, spinB);
