@@ -6,7 +6,7 @@
     },
     {
         "name": "gold",
-        "visuals": "cone_gold.png",
+        "visuals": "holo_gold.jpg",
         "canUnbox": false
     },
     {
