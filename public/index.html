@@ -856,6 +856,9 @@
                                         triggerConfetti(this.body.position);
                                         if (this.isDuelCone) {
                                             this.coneManager.reportResult(this.name, 'win');
+                                        }else{
+                                            this.coneManager.reportResult(this.name, 'win');
+                                            this.gameManager.socket.emit('win', this.name);
                                         }
                                         this.startFadeOut();
                                     } else {
@@ -866,6 +869,7 @@
                                         } else {
                                             
                                             console.log(`[Cone] Regular cone "${this.name}" failed on ground. Removing.`);
+                                            this.gameManager.socket.emit('fail', this.name);
                                             document.getElementById('failSound').play(); 
                                             this.startFadeOut();
                                         }
@@ -920,6 +924,8 @@
                                 const loser = this.name;
                                 const winner = (loser === player1) ? player2 : player1;
 
+                                this.coneManager.reportResult(loser, 'fail');
+                            }else{
                                 this.coneManager.reportResult(loser, 'fail');
                             }
                         }
