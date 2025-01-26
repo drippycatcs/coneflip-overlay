@@ -108,12 +108,13 @@ app.get('/api/cones/add', async (req, res, next) => {
 });
 
 app.get('/api/cones/duel', (req, res) => {
-   const name = req.query.name?.toLowerCase().trim() || '';
-     const name2 = req.query.duel?.toLowerCase().trim() || '';
-     if (!name) return res.send('Name cannot be blank or invalid.');
-     io.emit("addConeDuel", name, name2);
+    const name = req.query.name?.toLowerCase().trim() || '';
+    const target = req.query.target?.toLowerCase().trim() || '';
+    if (!name || !target) return res.send('Name cannot be blank or invalid.');
+    if (name == target) return res.send('You cannot duel yourself.');
+    io.emit("addConeDuel", name, target);
     res.sendStatus(200);
- });
+});
 
 app.get('/api/leaderboard', async (req, res, next) => {
     const name = req.query.name?.toLowerCase().trim() || '';

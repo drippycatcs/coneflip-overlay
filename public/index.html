@@ -141,8 +141,8 @@
             transition: opacity 0.5s ease;
         }
 
-                /* Notification Container */
-                #mk-notification {
+        /* Notification Container */
+        #mk-notification {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -164,17 +164,25 @@
 
         /* Fade In Animation */
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         /* Fade Out Animation */
         @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
+            from {
+                opacity: 1;
+            }
+
+            to {
+                opacity: 0;
+            }
         }
-
-
     </style>
 </head>
 
@@ -243,7 +251,7 @@
                     this.world = this.engine.world;
                     this.world.gravity.y = 2;
 
-                    
+
                     this.render = Render.create({
                         canvas: document.getElementById('world'),
                         engine: this.engine,
@@ -267,14 +275,14 @@
                     this.setupEvents();
                     this.updatePlayerSkins();
 
-                    
+
                     Events.on(this.engine, 'collisionStart', (evt) => {
                         this.coneManager.handleCollision(evt);
                     });
                 }
 
                 setupGround() {
-                    
+
                     this.ground = Bodies.rectangle(
                         window.innerWidth / 2,
                         window.innerHeight + 10,
@@ -307,13 +315,13 @@
                         this.updatePlayerSkins();
                     });
 
-                    
+
                     this.socket.on('addConeDuel', (p1, p2) => {
-                        
+
                         this.coneManager.addConeDuel(p1, p2);
                     });
 
-                    
+
                     Events.on(this.engine, 'afterUpdate', () => {
                         this.coneManager.updateCones();
                     });
@@ -389,8 +397,8 @@
                     ];
                     this.duel = null;
                     this.duelBodies = { bodyA: null, bodyB: null };
-                    this.duelCones = []; 
-                    this.duelFailedCones = 0; 
+                    this.duelCones = [];
+                    this.duelFailedCones = 0;
 
                     this.availableSkins = {};
                     fetch('/api/skins/available')
@@ -432,7 +440,7 @@
                     setTimeout(() => {
                         position.occupied = false;
                         this.processConeQueue();
-                    }, 5000); 
+                    }, 5000);
 
                     setTimeout(() => cone.launch(), 1000);
                 }
@@ -450,7 +458,7 @@
                         isFinished: false,
                     };
                     document.getElementById('fight').play();
-                    showMortalKombatNotification(p1,p2)
+                    showMortalKombatNotification(p1, p2)
                     this.addDuelCone(p1, 0.35);
                     this.addDuelCone(p2, 0.65);
                 }
@@ -482,11 +490,11 @@
                     setTimeout(() => cone.launchDuel(ratio), 2000);
                 }
 
-                
-                
-                
-                
-                
+
+
+
+
+
                 reportResult(playerName, result) {
                     if (!this.duel || this.duel.isFinished) return;
 
@@ -496,7 +504,7 @@
                     if (playerName === player1) this.duel.p1Result = result;
                     else this.duel.p2Result = result;
 
-                    
+
                     if (this.duel.p1Result === 'win' && this.duel.p2Result !== 'win') {
                         this.finishDuel(player1);
                         return;
@@ -506,7 +514,7 @@
                         return;
                     }
 
-                    
+
                     if (this.duel.p1Result === 'fail' && this.duel.p2Result !== 'fail') {
                         this.finishDuel(player2);
                         return;
@@ -516,7 +524,7 @@
                         return;
                     }
 
-                    
+
                     if (this.duel.p1Result === 'fail' && this.duel.p2Result === 'fail') {
                         this.relaunchDuelConesTowardsEachOther();
                     }
@@ -529,21 +537,21 @@
                     }
                     this.gameManager.socket.emit('duelWinner', winnerName);
 
-                    
+
                     this.duelCones.forEach(cone => {
-                        if (cone && !cone.isRemoved) { 
+                        if (cone && !cone.isRemoved) {
                             cone.remove();
                         }
                     });
 
-                    
+
                     this.duelBodies.bodyA = null;
                     this.duelBodies.bodyB = null;
                     this.duelCones = [];
                     this.duelFailedCones = 0;
                     this.duel = null;
 
-                    
+
                     triggerConfetti({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
                     document.getElementById('winner').play();
 
@@ -568,21 +576,21 @@
                     const coneA = this.duelCones[0];
                     const coneB = this.duelCones[1];
 
-                    
+
                     [coneA, coneB].forEach(cone => {
                         cone.resetForRelaunch();
                     });
 
-                    
+
                     const centerX = window.innerWidth / 2;
 
-                    
+
                     const directionA = (coneA.body.position.x < centerX) ? 1 : -1;
                     const directionB = (coneB.body.position.x > centerX) ? -1 : 1;
 
-                    
-                    const forceMagnitudeX = 1; 
-                    const forceMagnitudeY = -2; 
+
+                    const forceMagnitudeX = 1;
+                    const forceMagnitudeY = -2;
 
                     console.log(`[Duel Relaunch] Applying force to ${coneA.name}: x=${forceMagnitudeX * directionA}, y=${forceMagnitudeY}`);
                     Body.applyForce(coneA.body, coneA.body.position, {
@@ -596,14 +604,14 @@
                         y: forceMagnitudeY
                     });
 
-                    
-                    const angularVelocity = 0.1; 
+
+                    const angularVelocity = 0.1;
                     Body.setAngularVelocity(coneA.body, angularVelocity * directionA);
                     Body.setAngularVelocity(coneB.body, angularVelocity * directionB);
 
                     console.log(`[Duel Relaunch] Angular velocities set: ${coneA.name}=${angularVelocity * directionA}, ${coneB.name}=${angularVelocity * directionB}`);
 
-                    
+
                     this.duelFailedCones = 0;
                 }
 
@@ -647,28 +655,28 @@
                     }
                 }
 
-                
+
                 applyBeybladeForce(bodyA, bodyB) {
                     const dx = bodyB.position.x - bodyA.position.x;
                     const dy = bodyB.position.y - bodyA.position.y;
                     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
-                    
-                    const pushStrength = 4 + Math.random() * 5; 
+
+                    const pushStrength = 4 + Math.random() * 5;
                     const pushStrength2 = 4 + Math.random() * 5;
                     const nx = dx / dist;
                     const ny = dy / dist;
 
-                    
-                    const baseSpin = Math.random() * 0.3; 
-                    const baseSpin2 = Math.random() * 0.3; 
+
+                    const baseSpin = Math.random() * 0.3;
+                    const baseSpin2 = Math.random() * 0.3;
                     const spinA = baseSpin * (Math.random() > 0.5 ? 1 : -1) * pushStrength;
                     const spinB = baseSpin2 * (Math.random() > 0.5 ? 1 : -1) * pushStrength2;
 
                     Body.setAngularVelocity(bodyA, spinA);
                     Body.setAngularVelocity(bodyB, spinB);
 
-                    
+
                     Body.applyForce(bodyA, bodyA.position, {
                         x: -nx * pushStrength,
                         y: -ny * pushStrength
@@ -707,7 +715,7 @@
                     this.coneManager = coneManager;
                     this.gameManager = gameManager;
                     this.isDuelCone = isDuelCone;
-                    this.isRemoved = false; 
+                    this.isRemoved = false;
 
                     this.hasLaunched = false;
                     this.celebrated = false;
@@ -851,28 +859,19 @@
                                     const upright = this.isUpright();
                                     console.log(`[Cone] ${this.name} isUpright: ${upright}, Angle: ${this.body.angle.toFixed(2)} radians`);
                                     if (upright) {
-                                        
+
                                         document.getElementById('coolSound').play();
                                         triggerConfetti(this.body.position);
-                                        if (this.isDuelCone) {
-                                            this.coneManager.reportResult(this.name, 'win');
-                                        }else{
-                                            this.coneManager.reportResult(this.name, 'win');
-                                            this.gameManager.socket.emit('win', this.name);
-                                        }
+                                        this.gameManager.socket.emit('win', this.name);
                                         this.startFadeOut();
                                     } else {
                                         if (this.isDuelCone && this.coneManager.duel && !this.coneManager.duel.isFinished) {
-                                            
-                                           // document.getElementById('failSound').play();
                                             this.coneManager.duelConeFailed();
                                         } else {
-                                            
-                                            console.log(`[Cone] Regular cone "${this.name}" failed on ground. Removing.`);
-                                            this.gameManager.socket.emit('fail', this.name);
-                                            document.getElementById('failSound').play(); 
+                                            document.getElementById('failSound').play();
                                             this.startFadeOut();
                                         }
+                                        this.gameManager.socket.emit('fail', this.name);
                                     }
                                 }
                             }, 2000);
@@ -887,15 +886,15 @@
                 }
 
                 resetForRelaunch() {
-                    
+
                     Body.setPosition(this.body, {
                         x: this.body.position.x,
                         y: window.innerHeight - 85
                     });
                     Body.setVelocity(this.body, { x: 0, y: 0 });
                     Body.setAngularVelocity(this.body, 0);
-                    
-                    
+
+
                     Body.setStatic(this.body, false);
                     this.hasLaunched = true;
                     this.celebrated = false;
@@ -904,19 +903,19 @@
                 isUpright() {
                     let a = this.body.angle % (2 * Math.PI);
                     if (a < 0) a += 2 * Math.PI;
-                    const eps = 0.2; 
+                    const eps = 0.2;
                     return (
                         a < eps ||
                         a > 2 * Math.PI - eps
                     );
                 }
 
-                
+
                 checkOffScreen() {
                     const floorY = window.innerHeight + 10;
                     const { y } = this.body.position;
                     if (y > floorY) {
-                        
+
                         if (this.isDuelCone && this.coneManager.duel && !this.coneManager.duel.isFinished) {
                             const duel = this.coneManager.duel;
                             if (duel && !duel.isFinished) {
@@ -925,7 +924,7 @@
                                 const winner = (loser === player1) ? player2 : player1;
 
                                 this.coneManager.reportResult(loser, 'fail');
-                            }else{
+                            } else {
                                 this.coneManager.reportResult(loser, 'fail');
                             }
                         }
@@ -944,7 +943,7 @@
                 }
 
                 remove() {
-                    if (this.isRemoved) return; 
+                    if (this.isRemoved) return;
                     this.isRemoved = true;
 
                     if (this.nameElement) this.nameElement.remove();
@@ -959,7 +958,7 @@
                 }
             }
 
-            
+
             const triggerConfetti = (pos) => {
                 const origin = {
                     x: pos.x / window.innerWidth,
@@ -978,7 +977,7 @@
                 steps.forEach((opts) => confetti({ origin, ...opts }));
             };
 
-            
+
             const goldAnimation = (playerName) => {
                 document.getElementById('newGold').play();
                 const container = document.getElementById('celebration-container');
@@ -998,31 +997,31 @@
                 }, 4000);
             };
 
-                    
-        function showMortalKombatNotification(name1,name2) {
-            const notification = document.getElementById('mk-notification');
-            notification.style.opacity = '1'; 
-            notification.textContent = name1 + " VS " + name2;
-            notification.style.animation = 'fadeIn 0.5s forwards';
 
-            
-            setTimeout(() => {
-                
-                notification.innerHTML = '<img src="fight.png" alt="FIGHT" style="width: 100%; height: auto; max-width: 500px;">';
-            }, 1500);
-
-            
-            setTimeout(() => {
-                notification.style.animation = 'fadeOut 0.5s forwards';
-                
-                notification.addEventListener('animationend', () => {
-                    notification.innerHTML = ''; 
-                }, { once: true });
-            }, 3000);
-        }
+            function showMortalKombatNotification(name1, name2) {
+                const notification = document.getElementById('mk-notification');
+                notification.style.opacity = '1';
+                notification.textContent = name1 + " VS " + name2;
+                notification.style.animation = 'fadeIn 0.5s forwards';
 
 
-            
+                setTimeout(() => {
+
+                    notification.innerHTML = '<img src="fight.png" alt="FIGHT" style="width: 100%; height: auto; max-width: 500px;">';
+                }, 1500);
+
+
+                setTimeout(() => {
+                    notification.style.animation = 'fadeOut 0.5s forwards';
+
+                    notification.addEventListener('animationend', () => {
+                        notification.innerHTML = '';
+                    }, { once: true });
+                }, 3000);
+            }
+
+
+
             const gameManager = new GameManager();
         })();
     </script>
