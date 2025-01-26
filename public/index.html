@@ -507,20 +507,25 @@
 
                     if (this.duel.p1Result === 'win' && this.duel.p2Result !== 'win') {
                         this.finishDuel(player1);
+                        this.gameManager.socket.emit('fail', this.player2);
                         return;
                     }
                     if (this.duel.p2Result === 'win' && this.duel.p1Result !== 'win') {
                         this.finishDuel(player2);
+                        this.gameManager.socket.emit('fail', this.player1);
                         return;
                     }
 
 
                     if (this.duel.p1Result === 'fail' && this.duel.p2Result !== 'fail') {
                         this.finishDuel(player2);
+                        this.gameManager.socket.emit('fail', this.player1);
+                    
                         return;
                     }
                     if (this.duel.p2Result === 'fail' && this.duel.p1Result !== 'fail') {
                         this.finishDuel(player1);
+                        this.gameManager.socket.emit('fail', this.player2);
                         return;
                     }
 
@@ -537,7 +542,7 @@
                     }
                     this.gameManager.socket.emit('duelWinner', winnerName);
 
-
+                    this.gameManager.socket.emit('win', this.winnerName);
                     this.duelCones.forEach(cone => {
                         if (cone && !cone.isRemoved) {
                             cone.remove();
@@ -871,7 +876,7 @@
                                             document.getElementById('failSound').play();
                                             this.startFadeOut();
                                         }
-                                        this.gameManager.socket.emit('fail', this.name);
+                                   
                                     }
                                 }
                             }, 2000);
