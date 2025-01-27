@@ -556,6 +556,19 @@ class SkinsManager {
     }
 }
 
+
+(async () => {
+    setTimeout(() => {
+        io.emit('restart'); // This emits the event to all currently connected clients
+        console.log('Restarted the server');
+    }, 2000);
+
+
+
+
+})();
+
+
 io.on('connection', async (socket) => {
     let topPlayer = null;
 
@@ -574,6 +587,7 @@ io.on('connection', async (socket) => {
                     topPlayer = newTopPlayer;
                     socket.emit('goldSkin', topPlayer);
                     socket.emit('newGoldCelebration', topPlayer);
+
                 }
 
                 io.emit('refreshLb', result);
@@ -590,11 +604,13 @@ io.on('connection', async (socket) => {
 });
 
 async function startServer() {
+
     try {
         await Promise.all([LeaderboardManager.initialize(), SkinsManager.initialize()]);
 
         http.listen(CONFIG.PORT, () => {
             console.log(`Server is running on port ${CONFIG.PORT}`);
+
         });
     } catch (err) {
         console.error('Failed to start server:', err);
