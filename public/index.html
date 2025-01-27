@@ -393,6 +393,7 @@
                     this.gameManager = gameManager;
                     this.cones = [];
                     this.coneQueue = [];
+                    this.coneQueueDuel = [];
                     this.positions = [
                         { x: (2 * window.innerWidth) / 5, occupied: false },
                         { x: (3 * window.innerWidth) / 5, occupied: false },
@@ -449,9 +450,16 @@
                     setTimeout(() => cone.launch(), 1000);
                 }
 
+
+
+
+
                 addConeDuel(p1, p2) {
                     if (this.duel && !this.duel.isFinished) {
-                        console.log('[ConeManager] A duel is already in progress.');
+                        setTimeout(() => {
+                            this.addConeDuel(p1, p2);
+                            console.log("[QUEUDEBUG]")
+                        }, 1000); 
                         return;
                     }
                     this.duel = {
@@ -461,10 +469,15 @@
                         p2Result: null,
                         isFinished: false,
                     };
-                    document.getElementById('fight').play();
+
+                    setTimeout(() => {
+                        document.getElementById('fight').play();
+                    this.coneQueueDuel = this.coneQueueDuel.filter(item => item !== p1);
                     showMortalKombatNotification(p1, p2)
                     this.addDuelCone(p1, 0.35);
                     this.addDuelCone(p2, 0.65);
+                    }, 2000);
+       
                 }
 
                 addDuelCone(name, ratio) {
@@ -680,8 +693,8 @@
                     const ny = dy / dist;
 
 
-                    const baseSpin = Math.random() * 0.3;
-                    const baseSpin2 = Math.random() * 0.3;
+                    const baseSpin = Math.random() * 0.15;
+                    const baseSpin2 = Math.random() * 0.15;
                     const spinA = baseSpin * (Math.random() > 0.5 ? 1 : -1) * pushStrength;
                     const spinB = baseSpin2 * (Math.random() > 0.5 ? 1 : -1) * pushStrength2;
 
@@ -933,7 +946,7 @@
 
 
                 checkOffScreen() {
-                    const floorY = window.innerHeight + 10;
+                    const floorY = window.innerHeight + 1000; // Buffer so player doesnt instantly die when falling off
                     const { y } = this.body.position;
                     if (y > floorY) {
 

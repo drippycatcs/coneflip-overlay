@@ -106,12 +106,16 @@ app.get('/api/cones/add', async (req, res, next) => {
         next(err);
     }
 });
-
 app.get('/api/cones/duel', (req, res) => {
     const name = req.query.name?.toLowerCase().trim() || '';
-    const target = req.query.target?.toLowerCase().trim() || '';
+    let target = req.query.target?.toLowerCase().trim() || '';
+    
+    // Remove '@' from the start of target if present
+    target = target.replace(/^@/, '');
+
     if (!name || !target) return res.send('Name cannot be blank or invalid.');
-    if (name == target) return res.send('You cannot duel yourself.');
+    if (name === target) return res.send('You cannot duel yourself.');
+    
     io.emit("addConeDuel", name, target);
     res.sendStatus(200);
 });
