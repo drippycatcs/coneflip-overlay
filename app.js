@@ -560,7 +560,7 @@ class SkinsManager {
 (async () => {
     setTimeout(() => {
         io.emit('restart'); // This emits the event to all currently connected clients
-        console.log('Restarted the server');
+        console.log('Restarted the client');
     }, 2000);
 
 
