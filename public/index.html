@@ -12,7 +12,7 @@
         body {
             margin: 0;
             overflow: hidden;
-           
+
         }
 
         #world,
@@ -273,6 +273,7 @@
                     this.isSlowMotion = false;
 
                     this.setupGround();
+                    this.setupWalls();
                     this.setupEvents();
                     this.updatePlayerSkins();
 
@@ -298,6 +299,51 @@
                     );
                     Composite.add(this.world, this.ground);
                 }
+
+
+                setupWalls() {
+            
+                    this.ground = Bodies.rectangle(
+                        window.innerWidth / 2,
+                        window.innerHeight + 10,
+                        window.innerWidth,
+                        40,
+                        {
+                            isStatic: true,
+                            render: { fillStyle: 'transparent', strokeStyle: 'transparent' },
+                            friction: 1,
+                            frictionStatic: 1
+                        }
+                    );
+
+             
+                    this.leftWall = Bodies.rectangle(
+                        -10, 
+                        window.innerHeight / 2,
+                        20, 
+                       window.innerHeight * 5,
+                        {
+                            isStatic: true,
+                            render: { fillStyle: 'transparent', strokeStyle: 'transparent' }
+                        }
+                    );
+
+                  
+                    this.rightWall = Bodies.rectangle(
+                        window.innerWidth + 10, 
+                        window.innerHeight / 2,
+                        20,
+                        window.innerHeight * 5,
+                        {
+                            isStatic: true,
+                            render: { fillStyle: 'transparent', strokeStyle: 'transparent' }
+                        }
+                    );
+
+                    // Add ground and walls to the world
+                    Composite.add(this.world, [this.ground, this.leftWall, this.rightWall]);
+                }
+
 
                 setupEvents() {
                     this.socket.on('addCone', (name) => {
@@ -459,7 +505,7 @@
                         setTimeout(() => {
                             this.addConeDuel(p1, p2);
                             console.log("[QUEUDEBUG]")
-                        }, 1000); 
+                        }, 1000);
                         return;
                     }
                     this.duel = {
@@ -472,12 +518,12 @@
 
                     setTimeout(() => {
                         document.getElementById('fight').play();
-                    this.coneQueueDuel = this.coneQueueDuel.filter(item => item !== p1);
-                    showMortalKombatNotification(p1, p2)
-                    this.addDuelCone(p1, 0.35);
-                    this.addDuelCone(p2, 0.65);
+                        this.coneQueueDuel = this.coneQueueDuel.filter(item => item !== p1);
+                        showMortalKombatNotification(p1, p2)
+                        this.addDuelCone(p1, 0.35);
+                        this.addDuelCone(p2, 0.65);
                     }, 2000);
-       
+
                 }
 
                 addDuelCone(name, ratio) {
@@ -693,8 +739,8 @@
                     const ny = dy / dist;
 
 
-                    const baseSpin = Math.random() * 0.15;
-                    const baseSpin2 = Math.random() * 0.15;
+                    const baseSpin = Math.random() * 0.3;
+                    const baseSpin2 = Math.random() * 0.3;
                     const spinA = baseSpin * (Math.random() > 0.5 ? 1 : -1) * pushStrength;
                     const spinB = baseSpin2 * (Math.random() > 0.5 ? 1 : -1) * pushStrength2;
 
