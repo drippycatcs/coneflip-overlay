@@ -748,14 +748,7 @@
                     Body.setAngularVelocity(bodyB, spinB);
 
 
-                    Body.applyForce(bodyA, bodyA.position, {
-                        x: -nx * pushStrength,
-                        y: -ny * pushStrength
-                    });
-                    Body.applyForce(bodyB, bodyB.position, {
-                        x: nx * pushStrength,
-                        y: ny * pushStrength
-                    });
+  
                 }
 
                 duelConeFailed() {
