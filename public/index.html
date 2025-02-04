@@ -622,9 +622,10 @@
                         y: forceMagnitudeY
                     });
 
-                    const angularVelocity = 0.1;
-                    Body.setAngularVelocity(coneA.body, angularVelocity * directionA);
-                    Body.setAngularVelocity(coneB.body, angularVelocity * directionB);
+                    const angularVelocityA = Math.random() * (0.2 - 0.05) + 0.05;
+                    const angularVelocityB = Math.random() * (0.2 - 0.05) + 0.05;
+                    Body.setAngularVelocity(coneA.body, angularVelocityA * directionA);
+                    Body.setAngularVelocity(coneB.body, angularVelocityB * directionB);
 
                     this.duelFailedCones = 0;
                 }
