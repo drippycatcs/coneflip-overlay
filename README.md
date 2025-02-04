@@ -1,4 +1,4 @@
-# Coneflip Twitch Game  - README
+# Coneflip Twitch Game  - README (out of date README needs new info)
 ![preview](https://i.imgur.com/9m5Gc7i.gif)
 ## Introduction
 
