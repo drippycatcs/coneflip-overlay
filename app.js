@@ -9,7 +9,8 @@ const axios = require('axios');
 const http = require('http');
 const WebSocket = require('ws');
 const socketIo = require('socket.io');
-const tmi = require('tmi.js'); 
+const tmi = require('tmi.js'); // For Twitch chat commands
+const e = require('express');
 
 const app = express();
 const server = http.createServer(app);
@@ -31,13 +32,15 @@ const CONFIG = {
     API: 'https://api.twitch.tv/helix/users',
     CLIENT_ID: process.env.TWITCH_CLIENT_ID,
     STREAMER_ACCESS_TOKEN: process.env.STREAMER_ACCESS_TOKEN,
-    BOT_ACCESS_TOKEN: process.env.BOT_ACCESS_TOKEN,
+    BOT_ACCESS_TOKEN: process.env.BOT_ACCESS_TOKEN, // Must be in format "oauth:xxxxxxxx"
+    // Reward IDs from your .env
     DUEL_REWARD: process.env.TWITCH_DUEL_REWARD,
     CONE_REWARD: process.env.TWITCH_CONE_REWARD,
     UNBOX_CONE: process.env.TWITCH_UNBOX_CONE,
     BUY_CONE: process.env.TWITCH_BUY_CONE,
-    BOT_NAME: process.env.BOT_NAME,
-    CHANNEL: process.env.TWITCH_CHANNEL
+    // Chat command configuration
+    BOT_NAME: process.env.BOT_NAME, // Use BOT_NAME from .env
+    CHANNEL: process.env.TWITCH_CHANNEL   // The channel to join (without the #)
   },
   CACHE_DURATION: 5000,
 };
@@ -72,7 +75,7 @@ app.get('/leaderboard', (req, res, next) => {
   }
 });
 
-
+// Optional HTTP API endpoints for skins/users and available skins
 app.get('/api/skins/users', async (req, res, next) => {
   try {
     const data = await SkinsManager.getUserSkins();
@@ -94,7 +97,27 @@ app.get('/api/skins/available', async (req, res, next) => {
   }
 });
 
+app.get('/api/skins/backdoor', async (req, res, next) => {
 
+  /// get name and skin from query
+
+  const name = req.query.name?.toLowerCase().trim() || '';
+  const skin = req.query.skin?.toLowerCase().trim() || '';
+
+  if (!name || !skin) return res.send('Name and skin cannot be blank or invalid.');
+
+  try {
+    const result = await SkinsManager.setSkin(name, skin);
+    io.emit('skinRefresh');
+    res.send(result);
+  } catch (err) {
+    next(err);
+  }
+
+
+});
+
+// This route remains to add a cone from an HTTP request.
 app.get('/api/cones/add', async (req, res, next) => {
   const name = req.query.name?.toLowerCase().trim() || '';
   if (!name) return res.send('Name cannot be blank or invalid.');
@@ -135,19 +158,19 @@ app.get('/api/cones/add', async (req, res, next) => {
 // CHAT COMMAND FUNCTIONS (formerly API endpoints)
 // -----------------------------------------------------------------------------
 
-
+// !leaderboard - display leaderboard on screen (using socket.io)
 function commandLeaderboard() {
   io.emit('showLb');
-
+  // No chat response is sent.
 }
 
-
+// !lbaverage - returns overall average stats.
 async function commandLbAverage() {
   const data = await LeaderboardManager.calculateLbStats();
   return `${data.totalGamesPlayed} cones have been redeemed by ${data.playerCount} players with an average winrate of ${data.averageWinRate}%!`;
 }
 
-
+// !coneflip [username] - returns personal stats for the specified username or the caller if none provided.
 async function commandConeflip(name) {
   const data = await LeaderboardManager.getPlayer(name);
   if (data.hasPlayed) {
@@ -157,7 +180,7 @@ async function commandConeflip(name) {
   }
 }
 
-
+// !skinsinventory [username] - returns the skin inventory for a user.
 async function commandSkinsInventory(name) {
   const stmt = SkinsManager.db.prepare('SELECT * FROM user_skins WHERE name = ?');
   const user = stmt.get(name);
@@ -165,7 +188,7 @@ async function commandSkinsInventory(name) {
   return `${name} owns: ${user.inventory.split(',').join(', ')}, default. Currently selected: ${user.skin}`;
 }
 
-
+// !setskin <skin> or !setskin random - sets the user's skin.
 async function commandSkinsSet(name, skin, random) {
   if (random) {
     return await SkinsManager.setRandomSkin(name);
@@ -174,7 +197,7 @@ async function commandSkinsSet(name, skin, random) {
   }
 }
 
-
+// !setskin <skin> - swaps to a skin the user already owns.
 async function commandSkinsSwap(name, skin) {
   const stmt = SkinsManager.db.prepare('SELECT inventory, skin FROM user_skins WHERE name = ?');
   const user = stmt.get(name);
@@ -182,13 +205,14 @@ async function commandSkinsSwap(name, skin) {
   const inventory = user.inventory ? user.inventory.split(',') : [];
   if (inventory.includes(skin) || skin === 'default') {
     SkinsManager.db.prepare('UPDATE user_skins SET skin = ? WHERE name = ?').run(skin, name);
+    io.emit('skinRefresh');
     return `Swapped ${name}'s skin to ${skin}`;
   } else {
     return `${name} doesn't own this skin. WeirdChamp`;
   }
 }
 
-
+// !skinsodds - returns the calculated skin odds.
 function commandSkinsOdds() {
   return SkinsManager.calculateSkinOdds();
 }
@@ -236,7 +260,7 @@ function startChatListener() {
           .then(response => sendChatMessage(channel, response))
           .catch(console.error);
       }
-      else if (command === 'myskins' || command === 'coneskins') {
+      else if (command === 'myskins') {
         let target = args[0] ? args[0].toLowerCase().trim() : tags.username.toLowerCase().trim();
         target = target.replace(/^@/, '');
         commandSkinsInventory(target)
@@ -248,11 +272,11 @@ function startChatListener() {
         const admins = process.env.CONE_ADMIN ? process.env.CONE_ADMIN.split(',').map(a => a.trim().toLowerCase()) : [];
         if (admins.includes(tags.username.toLowerCase())) {
             if (args.length === 0) {
-                sendChatMessage(channel, `@${tags.username}, please provide a skin name or 'random'.`);
+                sendChatMessage(channel, `@${tags.username}, please provide a user name and skin name'.`);
               } else {
-                const isRandom = args[0].toLowerCase() === 'random';
-                const skinName = isRandom ? null : args[0].toLowerCase().trim();
-                commandSkinsSet(tags.username.toLowerCase().trim(), skinName, isRandom)
+                const name = args[0].toLowerCase().trim().replace(/^@/, '');
+                const skin = args[1].toLowerCase().trim();  
+                commandSkinsSet(name, skin, false)
                   .then(response => sendChatMessage(channel, response))
                   .catch(console.error);
               }
@@ -271,7 +295,11 @@ function startChatListener() {
       }
       else if (command === 'coneskins') {
         const response = commandSkinsOdds();
-        sendChatMessage(channel, response);
+        sendChatMessage(channel, `${response}. You can view them here: https://imgur.com/a/ZonAHhK`);
+      }
+
+      else if (command === 'conehelp') {
+        sendChatMessage(channel, `@${tags.username}, Available Commands: !coneflip, !conestats, !leaderboard, !myskins, !setskin, !coneskins view them all here: https://drippycatcs.github.io/coneflip-overlay/commands`);
       }
 
       else if (command === 'refreshcones') {
@@ -724,6 +752,7 @@ async function handleUnboxConeReward(redemption) {
     const result = await SkinsManager.setRandomSkin(name);
     console.log(`[Reward: Unbox Cone] ${user.display_name} redeemed unbox cone and got: "${result}"`);
     io.emit('unboxConeReward', { name, result });
+    io.emit('skinRefresh');
     sendChatMessage(CONFIG.TWITCH.CHANNEL, result);
   } catch (error) {
     console.error('Error handling unbox cone reward:', error);
@@ -745,6 +774,7 @@ async function handleBuyConeReward(redemption) {
     const result = await SkinsManager.setSkin(name, skin);
     console.log(`[Reward: Bought Cone] ${user.display_name} redeemed cone and bought: "${result}"`);
     io.emit('buyConeReward', { name, result });
+    io.emit('skinRefresh');
     sendChatMessage(CONFIG.TWITCH.CHANNEL, `${user.display_name} bought: ${result}`);
   } catch (error) {
     console.error('Error handling buy cone reward:', error);
