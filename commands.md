@@ -19,8 +19,8 @@ Below is a list of all available **Cone Skins** in the game.
 
 | **Skin Name**  | **Preview** | **Rarity** |
 |---------------|------------|------------|
-| Default | ![Default](public/skins/cone_default.png) | **Common** (Unobtainable) |
-| Gold | ![Gold](public/skins/cone_gold.png) | **ULTRA RARE** (1e place on LB) |
+| Default | ![Default](public/skins/cone_default.png) | **Default** |
+| Gold | ![Gold](public/skins/cone_gold.png) | **ULTRA RARE** (1st place on LB) |
 | Glorp | ![Glorp](public/skins/cone_glorp.png) | **Common** (30%) |
 | Inverted | ![Inverted](public/skins/cone_inverted.png) | **Common** (30%) |
 | Poorly Drawn | ![Poorly Drawn](public/skins/cone_poorlydrawn.png) | **Common** (30%) |
