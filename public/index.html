@@ -2,7 +2,12 @@
 <html lang="en">
 
 <head>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest"></script>
+
     <meta charset="viewport" content="width=device-width, initial-scale=1.0">
     <title>ConeFlip</title>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -30,7 +35,7 @@
 
         .userName {
             position: fixed;
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "Space Grotesk", serif;
             background-color: rgba(0, 0, 0, 0.7);
             padding: 5px 10px;
             font-weight: bold;
@@ -66,7 +71,7 @@
 
         #player-details h1 {
             font-size: 3rem;
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: "Space Grotesk", serif;
             color: gold;
             margin: 0;
         }
@@ -91,10 +96,16 @@
             margin-bottom: 20px;
         }
 
+        
         #winner-player-details h1 {
             font-size: 3rem;
-            font-family: Arial, Helvetica, sans-serif;
-            color: gold;
+            color: #fff;
+            font-family: "Space Grotesk", serif;
+            text-shadow:
+                -2px -2px 0 #000,
+                2px -2px 0 #000,
+                -2px 2px 0 #000,
+                2px 2px 0 #000;
             margin: 0;
         }
 
@@ -149,7 +160,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             color: #fff;
-            font-family: 'Anton', sans-serif;
+            font-family: "Space Grotesk", serif;
             font-size: 30px;
             text-transform: uppercase;
             letter-spacing: 5px;
@@ -201,8 +212,18 @@
 
     <div id="winner-container" class="hidden">
         <div id="winner-player-details">
-            <img id="winner-player-image" src="trophy.png">
+            <lottie-player
+            id="lottie-trophy"
+            src="trophy.json"
+            background="transparent"
+            speed="1"
+            style="width: 200px; height: 200px;position: absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:-1;"
+            loop
+            autoplay
+        ></lottie-player>
             <h1 id="winner-player-name"></h1>
+
+            
         </div>
     </div>
 
@@ -487,9 +508,9 @@
                     };
 
                     setTimeout(() => {
-                        document.getElementById('fight').play();
+                
                         this.coneQueueDuel = this.coneQueueDuel.filter(item => item !== p1);
-                        showMortalKombatNotification(p1, p2);
+                        //showMortalKombatNotification(p1, p2);
                         this.addDuelCone(p1, 0.35);
                         this.addDuelCone(p2, 0.65);
                     }, 2000);
@@ -582,8 +603,14 @@
 
                     const container = document.getElementById('winner-container');
                     const playerNameElem = document.getElementById('winner-player-name');
-                    playerNameElem.textContent = "Winner: " + winnerName;
+                    playerNameElem.innerHTML = "Winner: <br>" + winnerName;
                     container.classList.remove('hidden');
+                    const trophyAnimation = document.getElementById("lottie-trophy");
+                    trophyAnimation.stop()
+                    setTimeout(() => {trophyAnimation.play()}, 500);
+
+
+        
 
                     setTimeout(() => {
                         container.classList.add('fadeoutgold');
