@@ -1,5 +1,4 @@
 # 📜 Twitch Bot Commands
-This bot provides various commands for interacting with the **Cone Game** on Twitch. Below is a list of all available commands (excluding admin commands).
 
 ## 🛠 Available Commands
 
