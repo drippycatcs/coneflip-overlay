@@ -93,4 +93,18 @@
         "canUnbox": true,
         "unboxWeight": 3
     }
+    ,
+    {
+        "name": "mongolia",
+        "visuals": "cone_mongolia.webp",
+        "canUnbox": true,
+        "unboxWeight": 9
+    }
+    ,
+    {
+        "name": "subcone",
+        "visuals": "cone_sub.webp",
+        "canUnbox": false
+    }
 ]
+
