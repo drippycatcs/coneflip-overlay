@@ -105,6 +105,11 @@
         "name": "subcone",
         "visuals": "cone_sub.webp",
         "canUnbox": false
+    },
+    {
+        "name": "om",
+        "visuals": "cone_om.webp",
+        "canUnbox": false
     }
 ]
 
