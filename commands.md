@@ -6,7 +6,7 @@
 | **Command**       | **Description**                                             | **Usage**                         |
 |------------------|---------------------------------------------------------|----------------------------------|
 | `!leaderboard`   | View the cone leaderboard.                              | `!leaderboard`                   |
-| `!coneflip [@user]` | Flip a cone for yourself or another user.             | `!coneflip` or `!coneflip @username` |
+| `!coneflip [@user]` | Check someone's coneflipping stats.            | `!coneflip` or `!coneflip @username` |
 | `!conestats`     | View average leaderboard stats.                         | `!conestats`                      |
 | `!myskins [@user]` | See your or another user's skin inventory.            | `!myskins` or `!myskins @username` |
 | `!setskin <skin_name>` | Change your current skin.                           | `!setskin skin_name`               |
