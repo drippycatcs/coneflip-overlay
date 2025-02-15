@@ -409,9 +409,6 @@
                 }
 
                 getPlayerSkin(playerName) {
-                    if (playerName === this.currentTopPlayer) {
-                        return this.coneManager.availableSkins.gold;
-                    }
                     const found = this.playerSkins[playerName] || 'default';
                     return this.coneManager.availableSkins[found] || this.coneManager.availableSkins.default;
                 }
@@ -632,9 +629,14 @@
                         cone.resetForRelaunch();
                     });
 
+
+                    /// find center point between cone A and B and launch them towards each other
+
+                    const centerCones =    (coneA.body.position.x + coneB.body.position.x) / 2;
+
                     const centerX = window.innerWidth / 2;
-                    const directionA = (coneA.body.position.x < centerX) ? 1 : -1;
-                    const directionB = (coneB.body.position.x > centerX) ? -1 : 1;
+                    const directionA = (coneA.body.position.x < centerCones) ? 1 : -1;
+                    const directionB = (coneB.body.position.x > centerCones) ? -1 : 1;
 
                     const forceMagnitudeX = 1;
                     const forceMagnitudeY = -2;
@@ -649,8 +651,8 @@
                         y: forceMagnitudeY
                     });
 
-                    const angularVelocityA = Math.random() * (0.2 - 0.05) + 0.05;
-                    const angularVelocityB = Math.random() * (0.2 - 0.05) + 0.05;
+                    const angularVelocityA = Math.random() * (0.2 - 0.5) + 0.05;
+                    const angularVelocityB = Math.random() * (0.2 - 0.5) + 0.05;
                     Body.setAngularVelocity(coneA.body, angularVelocityA * directionA);
                     Body.setAngularVelocity(coneB.body, angularVelocityB * directionB);
 

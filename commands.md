@@ -18,7 +18,7 @@
 | `!giveskin <username> <skin>`  | Grant a skin to a user.                               | `!giveskin @username skin_name`           |
 | `!simcone <username>`          | Simulate a cone drop for a user.                      | `!simcone @username`                      |
 | `!simduel <username> [target]`   | Simulate a duel between two users. | `!simduel @username [@target]`              |
-| `!refreshcones`                | Refresh the cone list.                                | `!refreshcones`                           |
+| `!refreshcones`                | Refresh the view. (THIS WILL STOP ONGOING CONEFLIPS)                                | `!refreshcones`                           |
 | `!conestuck`                   | Trigger cone spamming for CONESTUCK event.            | `!conestuck`                              |
 
 ---
@@ -31,10 +31,12 @@ Below is a list of all available **Cone Skins** in the game.
 |-----------------|-------------------------------------------------|---------------------------------------------|
 | Default         | ![Default](public/skins/cone_default.png)       | **Default**                                 |
 | Gold            | ![Gold](public/skins/cone_gold.png)             | **ULTRA RARE** (1st place on LB)            |
+| Subcone         | ![Subcone](public/skins/cone_sub.webp)           | **ULTRA MEGA SUPER** (SUB TO CHANNEL TO GET) |
 | Glorp           | ![Glorp](public/skins/cone_glorp.png)           | **Common** (30%)                            |
 | Inverted        | ![Inverted](public/skins/cone_inverted.png)     | **Common** (30%)                            |
 | Poorly Drawn    | ![Poorly Drawn](public/skins/cone_poorlydrawn.png)| **Common** (30%)                           |
 | Negative        | ![Negative](public/skins/cone_negative.png)     | **Common** (30%)                            |
+| Cheese        | ![Negative](public/skins/cone_cheese.png)     | **Common** (30%)                            |
 | Comic           | ![Comic](public/skins/cone_comic.png)           | **Common** (30%)                            |
 | Case Hardened   | ![Case Hardened](public/skins/cone_casehardened.png)| **Common** (30%)                          |
 | Tiger Tooth     | ![Tiger Tooth](public/skins/cone_tigertooth.png)  | **Uncommon** (15%)                          |
@@ -46,7 +48,7 @@ Below is a list of all available **Cone Skins** in the game.
 | Dark Matter     | ![Dark Matter](public/skins/holo_darkmatter.jpg) | **Legendary** (3%)                          |
 | Iridescent      | ![Iridescent](public/skins/holo_iridescent.jpg)   | **Legendary** (3%)                          |
 | Mongolia        | ![Mongolia](public/skins/cone_mongolia.webp)      | **Rare** (9%)                               |
-| Subcone         | ![Subcone](public/skins/cone_sub.webp)           | **ULTRA MEGA SUPER** (SUB TO CHANNEL TO GET) |
+
 
 ---
 

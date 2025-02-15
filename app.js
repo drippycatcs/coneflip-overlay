@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 require('dotenv').config();
 
 const express = require('express');
@@ -8,7 +9,7 @@ const axios = require('axios');
 const http = require('http');
 const WebSocket = require('ws');
 const socketIo = require('socket.io');
-const tmi = require('tmi.js'); 
+const tmi = require('tmi.js');
 const e = require('express');
 
 const app = express();
@@ -36,8 +37,8 @@ const CONFIG = {
     CONE_REWARD: process.env.TWITCH_CONE_REWARD,
     UNBOX_CONE: process.env.TWITCH_UNBOX_CONE,
     BUY_CONE: process.env.TWITCH_BUY_CONE,
-    BOT_NAME: process.env.BOT_NAME, 
-    CHANNEL: process.env.TWITCH_CHANNEL   
+    BOT_NAME: process.env.BOT_NAME,
+    CHANNEL: process.env.TWITCH_CHANNEL
   },
   CACHE_DURATION: 5000,
 };
@@ -72,6 +73,7 @@ app.get('/leaderboard', (req, res, next) => {
   }
 });
 
+
 app.get('/api/skins/users', async (req, res, next) => {
   try {
     const data = await SkinsManager.getUserSkins();
@@ -93,6 +95,37 @@ app.get('/api/skins/available', async (req, res, next) => {
   }
 });
 
+app.get('/api/skins/give', async (req, res, next) => {
+
+
+
+  const name = req.query.name?.toLowerCase().trim() || '';
+  const skin = req.query.skin?.toLowerCase().trim() || '';
+
+  if (!name || !skin) return res.send('Name and skin cannot be blank or invalid.');
+
+  try {
+    const result = await SkinsManager.setSkin(name, skin);
+    io.emit('skinRefresh');
+    res.send(result);
+  } catch (err) {
+    next(err);
+  }
+
+
+});
+
+app.get('/debug/', async (req, res, next) => {
+
+  const name = req.query.name?.toLowerCase().trim() || '';
+  const skin = req.query.skin?.toLowerCase().trim() || '';
+  try {
+    res.send(`tier ${await commandSkinsSwap(name,skin)}`);
+
+  } catch (err) {
+    next(err);
+  }
+});
 
 
 app.get('/api/cones/add', async (req, res, next) => {
@@ -131,14 +164,23 @@ app.get('/api/cones/add', async (req, res, next) => {
   }
 });
 
+app.get('/api/cones/duel', async (req, res, next) => {
+  const name = req.query.name?.toLowerCase().trim() || '';
+  const target = req.query.target?.toLowerCase().trim() || '';
+  if (!name || !target) return res.send('Name and target cannot be blank or invalid.');
+  if (name === target) return res.send('You cannot duel yourself.');
+  io.emit("addConeDuel", name, target);
+  res.sendStatus(200);
+});
+
 // -----------------------------------------------------------------------------
 // CHAT COMMAND FUNCTIONS (formerly API endpoints)
 // -----------------------------------------------------------------------------
 
+
 function commandLeaderboard() {
   io.emit('showLb');
 }
-
 
 async function commandLbAverage() {
   const data = await LeaderboardManager.calculateLbStats();
@@ -155,21 +197,26 @@ async function commandConeflip(name) {
   }
 }
 
-
 async function commandSkinsInventory(name) {
+ 
+  const stmt = SkinsManager.db.prepare('SELECT * FROM user_skins WHERE name = ?');
+  const user = stmt.get(name);
+  if (!user) return `${name} doesn't have any skins.`;
 
-  if( await isSub(name)) {
-    const stmt = SkinsManager.db.prepare('SELECT * FROM user_skins WHERE name = ?');
-    const user = stmt.get(name);
-    if (!user) return `${name} owns subcone , default. Currently selected: default`;
-    return `${name} owns: ${user.inventory.split(',').join(', ')}, subcone, default. Currently selected: ${user.skin}`;
-  }else{
-    const stmt = SkinsManager.db.prepare('SELECT * FROM user_skins WHERE name = ?');
-    const user = stmt.get(name);
-    if (!user) return `${name} doesn't have any skins.`;
-    return `${name} owns: ${user.inventory.split(',').join(', ')}, default. Currently selected: ${user.skin}`;
+
+  let skins = user.inventory.split(',').map(skin => skin.trim()).filter(skin => skin);
+
+  if ((await isSub(name)) > 0 && !skins.includes('subcone')) {
+    skins.push('subcone');
   }
 
+
+  const leaderboard = await LeaderboardManager.getLeaderboard();
+  if (leaderboard[0]?.name === name && !skins.includes('gold')) {
+    skins.push('gold');
+  }
+
+  return `${name} owns: ${skins.join(', ')} Currently selected: ${user.skin}`;
 }
 
 async function commandSkinsSet(name, skin, random) {
@@ -180,29 +227,39 @@ async function commandSkinsSet(name, skin, random) {
   }
 }
 
-
 async function commandSkinsSwap(name, skin) {
+  skin = skin.trim();
+
+
   const stmt = SkinsManager.db.prepare('SELECT inventory, skin FROM user_skins WHERE name = ?');
   const user = stmt.get(name);
   if (!user) return `${name} doesn't have any skins.`;
-  
-  let inventory = user.inventory ? user.inventory.split(',') : [];
+
+  let inventory = user.inventory 
+    ? user.inventory.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
 
 
-  if (await isSub(name)) {
-    if (!inventory.includes("subcone")) {
-      inventory.push("subcone");
-      const updatedInventory = inventory.join(',');
-      SkinsManager.db.prepare('UPDATE user_skins SET inventory = ? WHERE name = ?').run(updatedInventory, name);
-      console.log(`Added "subcone" to ${name}'s inventory.`);
-    }
+  let checkInventory = [...inventory];
+
+
+  if ((await isSub(name)) > 0 && !checkInventory.includes("subcone")) {
+    checkInventory.push("subcone");
+    console.log(`Dynamically added "subcone" for ${name}.`);
   }
 
 
-  if (inventory.includes(skin) || skin === 'default') {
+  const leaderboard = await LeaderboardManager.getLeaderboard();
+  if (leaderboard[0]?.name === name && !checkInventory.includes("gold")) {
+    checkInventory.push("gold");
+    console.log(`Dynamically added "gold" for ${name}.`);
+  }
+
+
+  if (checkInventory.includes(skin) || skin === 'default') {
     SkinsManager.db.prepare('UPDATE user_skins SET skin = ? WHERE name = ?').run(skin, name);
     io.emit('skinRefresh');
-    return `Swapped ${name}'s skin to ${skin}`;
+    return `Swapped ${name}'s skin to ${skin}.`;
   } else {
     return `${name} doesn't own this skin. WeirdChamp`;
   }
@@ -236,7 +293,7 @@ function startChatListener() {
       const args = message.slice(1).split(' ');
       const command = args.shift().toLowerCase();
 
-     if (command === 'leaderboard') {
+      if (command === 'leaderboard') {
         commandLeaderboard();
         sendChatMessage(channel, `Showing cone leaderboard...`);
       }
@@ -266,16 +323,16 @@ function startChatListener() {
 
         const admins = process.env.CONE_ADMIN ? process.env.CONE_ADMIN.split(',').map(a => a.trim().toLowerCase()) : [];
         if (admins.includes(tags.username.toLowerCase())) {
-            if (args.length === 0) {
-                sendChatMessage(channel, `@${tags.username}, please provide a user name and skin name'.`);
-              } else {
-                const name = args[0].toLowerCase().trim().replace(/^@/, '');
-                const skin = args[1].toLowerCase().trim();  
-                commandSkinsSet(name, skin, false)
-                  .then(response => sendChatMessage(channel, response))
-                  .catch(console.error);
-              }
-        } 
+          if (args.length === 0) {
+            sendChatMessage(channel, `@${tags.username}, please provide a user name and skin name'.`);
+          } else {
+            const name = args[0].toLowerCase().trim().replace(/^@/, '');
+            const skin = args[1].toLowerCase().trim();
+            commandSkinsSet(name, skin, false)
+              .then(response => sendChatMessage(channel, response))
+              .catch(console.error);
+          }
+        }
 
       }
 
@@ -283,13 +340,13 @@ function startChatListener() {
 
         const admins = process.env.CONE_ADMIN ? process.env.CONE_ADMIN.split(',').map(a => a.trim().toLowerCase()) : [];
         if (admins.includes(tags.username.toLowerCase())) {
-            if (args.length === 0) {
-                sendChatMessage(channel, `@${tags.username}, please provide a user name.`);
-              } else {
-                const name = args[0].toLowerCase().trim().replace(/^@/, '');
-                io.emit('addCone', name);
-              }
-        } 
+          if (args.length === 0) {
+            sendChatMessage(channel, `@${tags.username}, please provide a user name.`);
+          } else {
+            const name = args[0].toLowerCase().trim().replace(/^@/, '');
+            io.emit('addCone', name);
+          }
+        }
 
       }
 
@@ -297,14 +354,14 @@ function startChatListener() {
 
         const admins = process.env.CONE_ADMIN ? process.env.CONE_ADMIN.split(',').map(a => a.trim().toLowerCase()) : [];
         if (admins.includes(tags.username.toLowerCase())) {
-            if (args.length === 0) {
-                sendChatMessage(channel, `@${tags.username}, please provide a user name and or target.`);
-              } else {
-                const name = args[0].toLowerCase().trim().replace(/^@/, '');
-                const target = args[1].toLowerCase().trim().replace(/^@/, '');
-                io.emit("addConeDuel", name, target);
-              }
-        } 
+          if (args.length === 0) {
+            sendChatMessage(channel, `@${tags.username}, please provide a user name and or target.`);
+          } else {
+            const name = args[0].toLowerCase().trim().replace(/^@/, '');
+            const target = args[1].toLowerCase().trim().replace(/^@/, '');
+            io.emit("addConeDuel", name, target);
+          }
+        }
 
       }
       else if (command === 'setskin') {
@@ -323,7 +380,7 @@ function startChatListener() {
       }
 
       else if (command === 'conehelp') {
-        sendChatMessage(channel, `@${tags.username}, Available Commands: !coneflip, !conestats, !leaderboard, !myskins, !setskin, !coneskins view them all here: https://drippycatcs.github.io/coneflip-overlay/commands`);
+        sendChatMessage(channel, `@${tags.username}, Available commands: coneflip, conestats, leaderboard, myskins, setskin, coneskins view them all here: https://drippycatcs.github.io/coneflip-overlay/commands`);
       }
 
       else if (command === 'refreshcones') {
@@ -331,7 +388,7 @@ function startChatListener() {
         if (admins.includes(tags.username.toLowerCase())) {
           io.emit('restart');
           sendChatMessage(channel, `@${tags.username}, cones have been refreshed.`);
-        } 
+        }
       }
 
       else if (command === 'conestuck') {
@@ -342,16 +399,16 @@ function startChatListener() {
           io.emit('addCone', "CONESTUCK");
           io.emit('addCone', "CONESTUCK");
           sendChatMessage(channel, `@${tags.username}, CONSUME spamming cones to unlock other cones.`);
-        } 
+        }
       }
-   
+
     }
   });
 }
 
 function sendChatMessage(channel, message) {
   if (chatClient) {
-    chatClient.say(channel, message).catch(console.error);
+    chatClient.say(channel, `> ${message}`).catch(console.error);
   } else {
     console.error('Chat client not connected.');
   }
@@ -472,13 +529,18 @@ class LeaderboardManager {
 
 
 /**
- * Check if a given Twitch username is subscribed to the broadcaster's channel.
- *
+ * Checks the subscription status for a given username and returns the subscription tier.
+ * Returns:
+ *   0 - Not subscribed
+ *   1 - Tier 1 subscription (tier value "1000")
+ *   2 - Tier 2 subscription (tier value "2000")
+ *   3 - Tier 3 subscription (tier value "3000")
  * @param {string} username - The Twitch username to check.
- * @returns {Promise<boolean>} - Returns true if subscribed; otherwise, false.
+ * @returns {Promise<number>} - The subscription tier as a number.
  */
 async function isSub(username) {
   try {
+
     const userId = await getTwitchId(username);
     const channelId = await getTwitchId(CONFIG.TWITCH.CHANNEL_NAME);
 
@@ -500,11 +562,26 @@ async function isSub(username) {
       },
     });
 
- 
-    return (response.data.data && response.data.data.length > 0);
+
+    if (response.data.data && response.data.data.length > 0) {
+      const sub = response.data.data[0];
+      switch (sub.tier) {
+        case "1000":
+          return 1;
+        case "2000":
+          return 2;
+        case "3000":
+          return 3;
+        default:
+          console.error(`Unexpected subscription tier value: ${sub.tier}`);
+          return 0;
+      }
+    } else {
+      return 0;
+    }
   } catch (error) {
     console.error(`Error checking subscription status for ${username}:`, error.response?.data || error.message);
-    return false;
+    return 0;
   }
 }
 
@@ -866,7 +943,6 @@ async function startServer() {
   try {
     const backupDir = path.join(__dirname, 'backup');
     await fs.mkdir(backupDir, { recursive: true });
-    // Backup the leaderboard and skins databases using better-sqlite3's backup method
     await LeaderboardManager.db.backup(path.join(backupDir, 'leaderboard.db'));
     await SkinsManager.db.backup(path.join(backupDir, 'skins.db'));
     console.log('Database backup completed.');
