@@ -11,7 +11,7 @@
 | `!setskin <skin_name>` | Change your current skin.                                   | `!setskin skin_name`                    |
 | `!coneskins`           | View all available skins and their drop rates.              | `!coneskins` ([View skins](https://imgur.com/a/ZonAHhK)) |
 
-## 🔧 Admin Commands
+## 🔧 Admin Commands (MODS)
 
 | **Command**                    | **Description**                                       | **Usage**                                 |
 |--------------------------------|-------------------------------------------------------|-------------------------------------------|
