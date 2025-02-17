@@ -73,7 +73,35 @@ app.get('/leaderboard', (req, res, next) => {
   }
 });
 
+app.get('/api/leaderboard', async (req, res, next) => {
+  const name = req.query.name?.toLowerCase().trim() || '';
+  const show = req.query.show === 'true';
 
+  try {
+      if (show) {
+          io.emit('showLb');
+          return res.sendStatus(200);
+      }
+
+      if (name) {
+          let result;
+          const data = await LeaderboardManager.getPlayer(name);
+          if (data.hasPlayed) {
+              result = `${name} cone stats: ${data.rank} (Ws: ${data.wins} / Ls: ${data.fails} / WR%: ${data.winrate.toFixed(
+                  2
+              )})`;
+          } else {
+              result = `${name} never tried coneflipping.`;
+          }
+          return res.send(result);
+      }
+
+      const data = await LeaderboardManager.getLeaderboard();
+      res.json(data);
+  } catch (err) {
+      next(err);
+  }
+});
 app.get('/api/skins/users', async (req, res, next) => {
   try {
     const data = await SkinsManager.getUserSkins();
@@ -178,8 +206,8 @@ app.get('/api/cones/duel', async (req, res, next) => {
 // -----------------------------------------------------------------------------
 
 
-function commandLeaderboard() {
-  io.emit('showLb');
+function commandLeaderboard(target) {
+  io.emit('showLb',target);
 }
 
 async function commandLbAverage() {
@@ -191,7 +219,7 @@ async function commandLbAverage() {
 async function commandConeflip(name) {
   const data = await LeaderboardManager.getPlayer(name);
   if (data.hasPlayed) {
-    return `${name} coneflip stats: Rank ${data.rank} (Ws: ${data.wins}, Ls: ${data.fails}, WR%: ${data.winrate.toFixed(2)}%)`;
+    return `${name} coneflip stats: Rank ${data.rank} (Ws: ${data.wins}, Ls: ${data.fails}, WR%: ${data.winrate.toFixed(2)}%).`;
   } else {
     return `${name} hasn't coneflipped yet.`;
   }
@@ -261,7 +289,7 @@ async function commandSkinsSwap(name, skin) {
     io.emit('skinRefresh');
     return `Swapped ${name}'s skin to ${skin}.`;
   } else {
-    return `${name} doesn't own this skin. WeirdChamp`;
+    return `${name} doesn't own this skin. WeirdChamp .`;
   }
 }
 
@@ -294,7 +322,10 @@ function startChatListener() {
       const command = args.shift().toLowerCase();
 
       if (command === 'leaderboard') {
-        commandLeaderboard();
+        let target = args[0] ? args[0].toLowerCase().trim() : tags.username.toLowerCase().trim();
+        target = target.replace(/^@/, '');
+        commandLeaderboard(target);
+
         sendChatMessage(channel, `Showing cone leaderboard...`);
       }
       else if (command === 'coneflip') {
@@ -376,11 +407,11 @@ function startChatListener() {
       }
       else if (command === 'coneskins') {
         const response = commandSkinsOdds();
-        sendChatMessage(channel, `${response}. You can view them here: https://drippycatcs.github.io/coneflip-overlay/commands#-cone-skins`);
+        sendChatMessage(channel, `${response}. You can view them here: https://drippycatcs.github.io/coneflip-overlay/commands#-cone-skins .`);
       }
 
       else if (command === 'conehelp') {
-        sendChatMessage(channel, `@${tags.username}, Available commands: coneflip, conestats, leaderboard, myskins, setskin, coneskins view them all here: https://drippycatcs.github.io/coneflip-overlay/commands`);
+        sendChatMessage(channel, `@${tags.username}, Available commands: coneflip, conestats, leaderboard, myskins, setskin, coneskins view them all here: https://drippycatcs.github.io/coneflip-overlay/commands .`);
       }
 
       else if (command === 'refreshcones') {
@@ -960,6 +991,7 @@ async function startServer() {
 }
 
 startServer();
+
 
 // -----------------------------------------------------------------------------
 // GRACEFUL SHUTDOWN: Close SQLite connections on exit/crash to prevent locks

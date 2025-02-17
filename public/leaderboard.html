@@ -1,337 +1,327 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coneflip Leaderboard</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coneflip Leaderboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-        .leaderboard-container {
-            position: fixed;
-            top: 30px;
-            right: -600px;
-            width: 575px;
-            background: rgba(0, 0, 0, .98);
-            border-radius: 15px;
-            padding: 15px 25px;
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
-            z-index: 1000;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #fff;
-            transition: right 0.8s cubic-bezier(0.25, 0.8, 0.25, 1),
-                opacity 0.5s ease-in-out;
-            opacity: 0;
-            overflow: hidden;
-        }
+    .leaderboard-container {
+      position: fixed;
+      top: 30px;
+      right: -600px;
+      width: 575px;
+      background: rgba(0, 0, 0, 0.98);
+      border-radius: 15px;
+      padding: 15px 25px;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+      z-index: 1000;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #fff;
+      transition: right 0.8s cubic-bezier(0.25, 0.8, 0.25, 1),
+        opacity 0.5s ease-in-out;
+      opacity: 0;
+      overflow: hidden;
+    }
 
-        .leaderboard-container.visible {
-            right: 20px;
-            opacity: 1;
-        }
+    .leaderboard-container.visible {
+      right: 20px;
+      opacity: 1;
+    }
 
-        .leaderboard-container h2 {
-            font-size: 30px;
-            text-align: center;
-            margin-bottom: 15px;
-            color: #94B658;
-        }
+    .leaderboard-container h2 {
+      font-size: 30px;
+      text-align: center;
+      margin-bottom: 15px;
+      color: #94B658;
+    }
 
-        .leaderboard-table-wrapper {
-            max-height: 400px;
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: #94B658 rgba(255, 255, 255, 0.1);
-        }
+    .leaderboard-table-wrapper {
+      max-height: 400px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #94B658 rgba(255, 255, 255, 0.1);
+    }
 
-        .leaderboard-table-wrapper::-webkit-scrollbar {
-            width: 8px;
-        }
+    .leaderboard-table-wrapper::-webkit-scrollbar {
+      width: 8px;
+    }
 
-        .leaderboard-table-wrapper::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-        }
+    .leaderboard-table-wrapper::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+    }
 
-        .leaderboard-table-wrapper::-webkit-scrollbar-thumb {
-            background-color: #94B658;
-            border-radius: 4px;
-        }
+    .leaderboard-table-wrapper::-webkit-scrollbar-thumb {
+      background-color: #94B658;
+      border-radius: 4px;
+    }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: transparent;
-        }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: transparent;
+    }
 
-        th,
-        td {
-            padding: 9px 12px;
-            text-align: left;
-            font-size: 21px;
-        }
+    th,
+    td {
+      padding: 9px 12px;
+      text-align: left;
+      font-size: 21px;
+    }
 
-        th {
-            position: sticky;
-            top: 0;
-            background: rgba(0, 0, 0, .98);
-            font-weight: normal;
-            color: #94B658;
-            z-index: 10;
-        }
+    th {
+      position: sticky;
+      top: 0;
+      background: rgba(0, 0, 0, 0.98);
+      font-weight: normal;
+      color: #94B658;
+      z-index: 10;
+    }
 
-        th:after,
-        th:before {
-            content: '';
-            position: absolute;
-            left: 0;
-            width: 100%;
-        }
+    th:after,
+    th:before {
+      content: '';
+      position: absolute;
+      left: 0;
+      width: 100%;
+    }
 
-        th:after {
-            bottom: 0;
-            border-bottom: 4px solid #555;
-        }
+    th:after {
+      bottom: 0;
+      border-bottom: 4px solid #555;
+    }
 
-        tr:nth-child(even) {
-            background: rgba(255, 255, 255, 0.1);
-        }
+    tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.1);
+    }
 
-        .top-player {
-            background: rgba(255, 215, 0, 0.2);
-        }
+    .top-player {
+      background: rgba(255, 215, 0, 0.2);
+    }
 
-        .cone_skin {
-       
-            display: block;
- 
-            width: 50px;
-            height: 50px;
-            background-position: center center;
-            background-size: contain;
-            background-repeat: repeat-y;
-            -webkit-mask-image: url(skins/cone_default.png);
-            mask-image: url(skins/cone_default.png);
-            mask-repeat: no-repeat;
-            mask-size: 60%;
-            -webkit-mask-size: 60%;
-            -webkit-mask-repeat: no-repeat;
-            -webkit-mask-position: center center;
-            mask-position: center center;
-            
-            margin-right: 9px;
+    /* New style for highlighting the target user */
+    .highlight-target {
+        border: 2px solid #32CD32; /* LimeGreen border */
+        box-shadow: 0 0 10px 2px rgba(50, 205, 50, 0.8); /* Green glow */
+      }
 
-        }
+    .cone_skin {
+      display: block;
+      width: 50px;
+      height: 50px;
+      background-position: center center;
+      background-size: contain;
+      background-repeat: repeat-y;
+      -webkit-mask-image: url(skins/cone_default.png);
+      mask-image: url(skins/cone_default.png);
+      mask-repeat: no-repeat;
+      mask-size: 60%;
+      -webkit-mask-size: 60%;
+      -webkit-mask-repeat: no-repeat;
+      -webkit-mask-position: center center;
+      mask-position: center center;
+      margin-right: 9px;
+    }
 
-        .text-center {
-            text-align: center;
-        }
+    .text-center {
+      text-align: center;
+    }
 
-        .player-rank {
-            color: #94B658;
-        }
+    .player-rank {
+      color: #94B658;
+    }
 
-        .placeholder-row {
-            color: rgba(255, 255, 255, 0.3);
-        }
-        
-        .flex_thing{
-            display: flex;
-            align-items: center;
-        }
-    </style>
+    .placeholder-row {
+      color: rgba(255, 255, 255, 0.3);
+    }
+    
+    .flex_thing {
+      display: flex;
+      align-items: center;
+    }
+  </style>
 </head>
-
 <body>
-    <div class="leaderboard-container">
-        <h2>CONEFLIP LEADERBOARD</h2>
-        <div class="leaderboard-table-wrapper">
-            <table id="leaderboard-table">
-                <thead>
-                    <tr>
-                        <th class="text-center">#</th>
-                        <th>Name</th>
-                        <th class="text-center">Ws</th>
-                        <th class="text-center">Ls</th>
-                        <th class="text-center">WR%</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- // -->
-                </tbody>
-            </table>
-        </div>
+  <div class="leaderboard-container">
+    <h2>CONEFLIP LEADERBOARD</h2>
+    <div class="leaderboard-table-wrapper">
+      <table id="leaderboard-table">
+        <thead>
+          <tr>
+            <th class="text-center">#</th>
+            <th>Name</th>
+            <th class="text-center">Ws</th>
+            <th class="text-center">Ls</th>
+            <th class="text-center">WR%</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Rows will be inserted here -->
+        </tbody>
+      </table>
     </div>
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let userSkinsMap = {};
+    let skinLibrary = {};
+    let currentTarget = null; // Global variable to store target user name
+    let lastLeaderboardData = [];
 
-        let userSkinsMap = {};
+    function createTableRows(count) {
+      const tbody = document.querySelector("#leaderboard-table tbody");
+      tbody.innerHTML = '';
+      for (let i = 0; i < count; i++) {
+        const row = document.createElement('tr');
+        row.id = `row-${i + 1}`;
+        row.innerHTML = '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>';
+        row.classList.add('placeholder-row');
+        tbody.appendChild(row);
+      }
+    }
 
+    function updateTable(data) {
+      // Save the latest leaderboard data for possible future updates.
+      lastLeaderboardData = data;
+      createTableRows(25);
+      const rows = document.querySelectorAll("#leaderboard-table tbody tr");
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (data[i]) {
+          const player = data[i];
+          const playerName = player.name || '—';
+          // Save the full player name on the row for later reference.
+          row.setAttribute('data-player-name', playerName);
+          const isTopPlayer = (i === 0);
+          const assignedSkinKey = userSkinsMap[playerName] || 'default';
+          let skinIconPath = skinLibrary[assignedSkinKey] || skinLibrary['default'] || '';
+          if (isTopPlayer && skinLibrary['gold']) {
+            skinIconPath = skinLibrary['gold'];
+          }
+          const skinIcon = `<div style="background-image: url(${skinIconPath})" class="cone_skin"></div>`;
 
-        let skinLibrary = {};
+          row.innerHTML = `
+              <td class="player-rank text-center">${i + 1}</td>
+              <td class="flex_thing text-center">${skinIcon} ${playerName.substring(0, 18)}</td>
+              <td class="text-center">${player.wins ?? '—'}</td>
+              <td class="text-center">${player.fails ?? '—'}</td>
+              <td class="text-center">${player.winrate ?? '—'}</td>
+          `;
 
-        function createTableRows(count) {
-            const tbody = document.querySelector("#leaderboard-table tbody");
-            tbody.innerHTML = '';
-
-            for (let i = 0; i < count; i++) {
-                const row = document.createElement('tr');
-                row.id = `row-${i + 1}`;
-                row.innerHTML = '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>';
-                row.classList.add('placeholder-row');
-                tbody.appendChild(row);
-            }
+          // Build the class list based on conditions.
+          let classes = [];
+          if (isTopPlayer) classes.push('top-player');
+          // If this player matches the current target, add a highlight.
+          if (currentTarget && playerName === currentTarget) classes.push('highlight-target');
+          row.className = classes.join(' ');
         }
+      }
+    }
 
+    async function loadUserSkins() {
+      try {
+        const response = await fetch('/api/skins/users');
+        const userSkinsList = await response.json();
+        userSkinsMap = userSkinsList.reduce((map, user) => {
+          map[user.name] = user.skin;
+          return map;
+        }, {});
+      } catch (error) {
+        console.error("Error fetching user skins:", error);
+      }
+    }
 
-        function updateTable(data) {
-            createTableRows(25);
+    async function loadSkinLibrary() {
+      try {
+        const response = await fetch('/api/skins/available');
+        skinLibrary = await response.json();
+      } catch (error) {
+        console.error("Error fetching skin library:", error);
+      }
+    }
 
-            const rows = document.querySelectorAll("#leaderboard-table tbody tr");
+    async function initialize() {
+      await loadSkinLibrary();
+      await loadUserSkins();
+      try {
+        const response = await fetch('/api/leaderboard');
+        const data = await response.json();
+        updateTable(data || []);
+      } catch (error) {
+        console.error("Error loading leaderboard:", error);
+        updateTable([]);
+      }
+    }
 
-            for (let i = 0; i < rows.length; i++) {
-                const row = rows[i];
+    let isVisible = false;
+    let hideTimeout;
+    let scrollInterval = null;
+    const socket = io();
 
-                if (data[i]) {
-                    const player = data[i];
-                    const isTopPlayer = (i === 0);
+    socket.on('refreshLb', (data) => {
+      updateTable(data);
+    });
 
+    socket.on('showLb', (target) => {
+      // Set the current target from the socket event.
+      currentTarget = target;
 
-                    const playerName = player.name || '—';
-                    const assignedSkinKey = userSkinsMap[playerName] || 'default';
-
-
-                    let skinIconPath = skinLibrary[assignedSkinKey] || skinLibrary['default'] || '';
-
-                    if (isTopPlayer && skinLibrary['gold']) {
-                        skinIconPath = skinLibrary['gold'];
-                    }
-
-
-                    const skinIcon = `<div style="background-image: url(${skinIconPath})" class="${isTopPlayer ? 'cone_skin' : 'cone_skin'
-                        }"></div>`;
-
-
-                    row.innerHTML = `
-                <td class="player-rank text-center">${i + 1}</td>
-                <td class="flex_thing text-center">${skinIcon} ${playerName}</td>
-                <td class="text-center">${player.wins ?? '—'}</td>
-                <td class="text-center">${player.fails ?? '—'}</td>
-                <td class="text-center">${player.winrate ?? '—'}</td>
-              `;
-
-
-                    row.className = isTopPlayer ? 'top-player' : '';
-                }
-            }
+      // Update the table rows to highlight the target user if present.
+      const rows = document.querySelectorAll("#leaderboard-table tbody tr");
+      rows.forEach(row => {
+        const playerName = row.getAttribute('data-player-name');
+        console.log(playerName, currentTarget);
+        if (playerName === currentTarget) {
+          row.classList.add('highlight-target');
+        } else {
+          row.classList.remove('highlight-target');
         }
+      });
 
+      if (isVisible) return;
+      const leaderboard = document.querySelector('.leaderboard-container');
+      const wrapper = document.querySelector('.leaderboard-table-wrapper');
+      wrapper.scrollTop = 0;
+      leaderboard.classList.add('visible');
+      isVisible = true;
 
+      if (scrollInterval) {
+        clearInterval(scrollInterval);
+      }
 
-        async function loadUserSkins() {
-            try {
-                const response = await fetch('/api/skins/users');
-                const userSkinsList = await response.json();
-                userSkinsMap = userSkinsList.reduce((map, user) => {
-                    map[user.name] = user.skin;
-                    return map;
-                }, {});
-            } catch (error) {
-                console.error("Error fetching user skins:", error);
-            }
+      setTimeout(() => {
+        let scrollAmount = 0;
+        scrollInterval = setInterval(() => {
+          wrapper.scrollTop = scrollAmount;
+          scrollAmount += 2;
+          if (
+            wrapper.scrollTop >= wrapper.scrollHeight - wrapper.clientHeight ||
+            !leaderboard.classList.contains('visible')
+          ) {
+            clearInterval(scrollInterval);
+            scrollInterval = null;
+          }
+        }, 20);
+      }, 1000);
+
+      clearTimeout(hideTimeout);
+      hideTimeout = setTimeout(() => {
+        leaderboard.classList.remove('visible');
+        isVisible = false;
+        if (scrollInterval) {
+          clearInterval(scrollInterval);
+          scrollInterval = null;
         }
+      }, 17000);
+    });
 
-
-        async function loadSkinLibrary() {
-            try {
-                const response = await fetch('/api/skins/available');
-                skinLibrary = await response.json();
-            } catch (error) {
-                console.error("Error fetching skin library:", error);
-            }
-        }
-
-        async function initialize() {
-
-            await loadSkinLibrary();
-
-
-            await loadUserSkins();
-            try {
-                const response = await fetch('/api/leaderboard');
-                const data = await response.json();
-                updateTable(data || []);
-            } catch (error) {
-                console.error("Error loading leaderboard:", error);
-                updateTable([]);
-            }
-        }
-
-
-        let isVisible = false;
-        let hideTimeout;
-        let scrollInterval = null;
-
-        const socket = io();
-
-
-        socket.on('refreshLb', (data) => {
-            updateTable(data);
-        });
-
-
-        socket.on('showLb', () => {
-            if (isVisible) return;
-
-            const leaderboard = document.querySelector('.leaderboard-container');
-            const wrapper = document.querySelector('.leaderboard-table-wrapper');
-
-            wrapper.scrollTop = 0;
-            leaderboard.classList.add('visible');
-            isVisible = true;
-
-
-            if (scrollInterval) {
-                clearInterval(scrollInterval);
-            }
-
-
-            setTimeout(() => {
-                let scrollAmount = 0;
-                scrollInterval = setInterval(() => {
-                    wrapper.scrollTop = scrollAmount;
-                    scrollAmount += 2;
-
-                    if (
-                        wrapper.scrollTop >= wrapper.scrollHeight - wrapper.clientHeight ||
-                        !leaderboard.classList.contains('visible')
-                    ) {
-                        clearInterval(scrollInterval);
-                        scrollInterval = null;
-                    }
-                }, 20);
-            }, 1000);
-
-
-            clearTimeout(hideTimeout);
-            hideTimeout = setTimeout(() => {
-                leaderboard.classList.remove('visible');
-                isVisible = false;
-
-                if (scrollInterval) {
-                    clearInterval(scrollInterval);
-                    scrollInterval = null;
-                }
-            }, 17000);
-        });
-
-
-        initialize();
-    </script>
+    initialize();
+  </script>
 </body>
-
 </html>
