@@ -1,256 +1,174 @@
-# Coneflip Twitch Game  - README (out of date README needs new info)
-![preview](https://i.imgur.com/9m5Gc7i.gif)
+
+
+![preview](https://i.imgur.com/LKCFju7.gif4)
+
 ## Introduction
 
-Coneflip is a Twitch overlay game created for Twitch streamer [aquaismissing](https://www.twitch.tv/aquaismissing)
+Coneflip is a Twitch overlay game designed to add fun interactivity to your stream. Originally created for the Twitch streamer [aquaismissing](https://www.twitch.tv/aquaismissing) by [DrippyCatCS](https://x.com/drippycatcs) and [Aquaismissing](https://x.com/aquaismissing), Coneflip now leverages Twitch API endpoints to power its interactive features. The primary interfaces are the cone gameplay window and the leaderboard view, which are integrated into your streaming setup via OBS.
 
-Created by:
+Contributions are welcome! Feel free to submit a pull request with enhancements or bug fixes!
 
- [DrippyCatCS](https://x.com/suikerstuiker)  
+---
 
- [Aquaismissing](https://x.com/aquaismissing)
+## Features
 
+- **Real-Time Leaderboard:** Watch player stats update live as the game progresses.
+- **Custom Skins:** Players can add and equip custom skins for their cones.
+- **OBS Integration:** Easily display the cone gameplay and leaderboard views in your stream.
 
-Feel free to make a  [pull request](https://github.com/drippycatcs/coneflip-overlay/pulls
-) and get your name added! 
+---
 
-*Be clear about what you added or changed, how it should work, and try to implement it in existing classes or functions while following clean coding practices.*
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) (v14 or higher recommended)
+- [npm](https://www.npmjs.com/)
+- OBS or any streaming software that supports browser sources
 
 ---
 
 ## Installation
 
-### Prerequisites
+### 1. Clone the Repository
 
-- [Node.js](https://nodejs.org/) installed (v14 or higher recommended)
-- [npm](https://www.npmjs.com/) installed
-- Basic understanding of running Node.js applications
-- OBS installed or any other streaming application supporting browser windows.
--  Any Twitch integration software that can make local requests installed.
-
-
----
-
-### Steps to Install
-
-1. **Clone the Repository**:
-   ```bash
-   git clone <https://github.com/drippycatcs/aqua-coneflip>
-2. **Install Dependencies**:
-    ```bash
-    npm install
-2. **Run**:
-    ```bash
-    start.bat
-2. **Enable game in OBS**:
-     
-    1:  Create the gameplay window 
-  ![Image](https://i.imgur.com/2v8ZUpo.png)
-
-        
-      
-        
-        
-        | Cone Window | 
-        | -------- |
-        | URL: http://localhost:3000/   |
-        | Width: 1920   | 
-        | Height: 1080    | 
-        | Custom framerate: ☑| 
-        | FPS: 60 | 
-        | CSS: body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; } | 
-        | Shutdown source when not visible : ☑| 
-        | Refresh browser when scene becomes active : ☑| 
-        
-
-    2:  Create the leaderboard window 
-  ![Image](https://i.imgur.com/27S6Yvr.png)
-
-        
-        | Leaderboard Window | 
-        | -------- |
-        | URL: http://localhost:3000/leaderboard   |
-        | Width: 1920   | 
-        | Height: 1080    | 
-        | Custom framerate: ☑| 
-        | FPS: 60 | 
-        | CSS: body { background-color: rgba(0, 0, 0, 0); margin: 0px auto; overflow: hidden; } | 
-        | Shutdown source when not visible : ☑| 
-        | Refresh browser when scene becomes active : ☑| 
-        
-
-
-  5. Create steam reward endpoint connections:
-      	*⚠ With local Twitch integration software*
-        ## Add Cone
-        http://localhost:3000/api/cones/add?name=%username%
-
-        ---
-
-        ## Display Leaderboard
-        http://localhost:3000/api/leaderboard?show=true
-
-        ---
-
-        ##  Apply Random Skin
-        http://localhost:3000/api/skins/set?name=%username%&random=true
-
-        ---
-
-        ##  Apply Specific Skin
-        http://localhost:3000/api/skins/set?name=%username%&skin=fade
-        
-        *(see skin list below)*
-
-        ---
-  
-  7. Enjoy!
-    
-    
-
-
-
-
-
-
-
-   ---
-# API Endpoints 
-
-
-## GET `/api/skins/users`
-Returns the JSON file containing all player assigned skins.
-
----
-
-## GET `/api/skins/odds`
-Returns all odds of each skin.
-
----
-
-## GET `/api/leaderboard`
-Returns the current leaderboard and the top player.  
-
-**Response**:  
-```json
-[
-    { "name": "player1", "wins": 10, "fails": 5, "winrate": "66.67" },
-    { "name": "player2", "wins": 4, "fails": 8, "winrate": "33.33" }
-	...
-]
+```bash
+git clone https://github.com/drippycatcs/coneflip-overlay.git
 ```
 
+### 2. Install Dependencies
 
+Navigate into the project directory and install the required packages:
 
-   ---
-# How to add skins
-  1. Put the skin image into the `public/skins/` directory.
-  2. Add a new entry to the `public/skins/config.json` file:
-  ```json
-    {
-        "name": "[YOUR SKIN NAME]",
-        "visuals": "[YOUR SKIN IMAGE FILENAME]",
-        "canUnbox": true,
-        "unboxWeight": 0
-    }
-  ```
-  3. Change the values accordingly.
-      - If you don't want your skin being unboxed by viewers, set `canUnbox` value to `false` and remove the `unboxWeight` field.
-      - When you want to add a "HOLO" texture prefix the filename with `holo_`.
-
-  ---
-# Built-in skins (list)
-
-```json
-{
-    {
-        "name": "default",
-        "visuals": "cone_xmas.webp",
-        "canUnbox": false
-    },
-    {
-        "name": "gold",
-        "visuals": "cone_gold.png",
-        "canUnbox": false
-    },
-    {
-        "name": "glorp",
-        "visuals": "cone_glorp.png",
-        "canUnbox": true,
-        "unboxWeight": 40
-    },
-    {
-        "name": "inverted",
-        "visuals": "cone_inverted.png",
-        "canUnbox": true,
-        "unboxWeight": 40
-    },
-    {
-        "name": "poorlydrawn",
-        "visuals": "cone_poorlydrawn.png",
-        "canUnbox": true,
-        "unboxWeight": 40
-    },
-    {
-        "name": "negative",
-        "visuals": "cone_negative.png",
-        "canUnbox": true,
-        "unboxWeight": 20
-    },
-    {
-        "name": "comic",
-        "visuals": "cone_comic.png",
-        "canUnbox": true,
-        "unboxWeight": 20
-    },
-    {
-        "name": "tigertooth",
-        "visuals": "cone_tigertooth.png",
-        "canUnbox": true,
-        "unboxWeight": 10
-    },
-    {
-        "name": "casehardened",
-        "visuals": "cone_casehardened.png",
-        "canUnbox": true,
-        "unboxWeight": 10
-    },
-    {
-        "name": "ahegao",
-        "visuals": "cone_ahegao.png",
-        "canUnbox": true,
-        "unboxWeight": 3
-    },
-    {
-        "name": "fade",
-        "visuals": "cone_fade.png",
-        "canUnbox": true,
-        "unboxWeight": 3
-    },
-    {
-        "name": "printstream",
-        "visuals": "cone_printstream.png",
-        "canUnbox": true,
-        "unboxWeight": 3
-    },
-    {
-        "name": "rainbow",
-        "visuals": "cone_rainbow.webp",
-        "canUnbox": true,
-        "unboxWeight": 0.5
-    },
-    {
-        "name": "darkmatter",
-        "visuals": "holo_darkmatter.jpg",
-        "canUnbox": true,
-        "unboxWeight": 1
-    }
-,
-    {
-        "name": "iridescent",
-        "visuals": "holo_iridescent.jpg",
-        "canUnbox": true,
-        "unboxWeight": 1
-    }
-}
+```bash
+cd coneflip-overlay
+npm install
 ```
+
+### 3. Configure Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```ini
+PORT=3000
+TWITCH_CLIENT_ID=your_twitch_client_id
+STREAMER_ACCESS_TOKEN=your_streamer_or_bot_access_token
+BOT_ACCESS_TOKEN=your_streamer_or_bot_access_token
+TWITCH_DUEL_REWARD=duel_reward_id
+TWITCH_CONE_REWARD=cone_reward_id
+TWITCH_UNBOX_CONE=unbox_cone_reward_id
+TWITCH_BUY_CONE=buy_cone_reward_id
+BOT_NAME=your_bot_username
+TWITCH_CHANNEL=your_channel_name
+SEVENTV_TOKEN=your_7tv_token
+CONE_ADMIN=admin1,admin2
+```
+
+> **Note:** The streamer token and bot token may be the same, provided they have the correct scopes. You can generate tokens with the required scopes using [Twitch Token Generator](https://twitchtokengenerator.com) with these scopes:  
+> `chat:read chat:edit channel:read:subscriptions channel:read:redemptions user:read:subscriptions user:read:chat user:write:chat`
+
+
+> **Note:** You can find your 7TV Token by doing  
+> `inspect element -> application -> local storage -> https://7tv.io/ -> 7tv-auth-token`
+
+> While logged in to 7TV.
+
+### 4. Run the Application
+
+Start the server with:
+
+```bash
+node app.js
+```
+
+The server will listen on the port specified (default is 3000).
+
+---
+
+## OBS Setup
+
+### Cone Gameplay Window
+
+1. **Add a Browser Source** in OBS.
+2. Set the URL to: `http://localhost:3000/`
+3. Configure the source as follows:
+   - **Width:** 1920
+   - **Height:** 1080
+   - **Custom FPS:** 60 (if needed)
+   - **CSS:** 
+     ```css
+     body { background-color: rgba(0, 0, 0, 0); margin: 0; overflow: hidden; }
+     ```
+   - Enable **Shutdown source when not visible** and **Refresh browser when scene becomes active**.
+
+### Leaderboard Window
+
+1. **Add another Browser Source** in OBS.
+2. Set the URL to: `http://localhost:3000/leaderboard`
+3. Use the same settings as the gameplay window (dimensions, FPS, CSS, etc.).
+
+---
+
+## API Endpoints
+
+For OBS integration, only the following endpoints are exposed:
+
+- **Cone Gameplay Window:**  
+  **GET** `/`  
+  *Serves the main cone gameplay view.*
+
+- **Leaderboard View:**  
+  **GET** `/leaderboard`  
+  *Serves the live leaderboard view.*
+
+---
+
+## Adding and Managing Skins
+
+### Adding a New Skin
+
+> **Note**
+> You can find a list to all included skins [here](https://drippycatcs.github.io/coneflip-overlay/commands#-cone-skins).
+
+1. **Add the Skin Image:**  
+   Place your skin image into the `public/skins/` directory.
+
+2. **Update the Configuration:**  
+   Edit the `public/skins/config.json` file to add a new skin entry. For example:
+
+    ```json
+    {
+      "name": "your_skin_name",
+      "visuals": "your_skin_image_filename",
+      "canUnbox": true,
+      "unboxWeight": 0
+    }
+    ```
+
+   - Set `"canUnbox"` to `false` if you do not want the skin to be unboxable.
+   - To add a “HOLO” texture, prefix the image filename with `holo_`.
+
+---
+
+## Contributing
+
+Contributions are highly appreciated! When submitting a pull request, please include:
+- A clear description of your changes.
+- Any necessary tests or documentation updates.
+- Adherence to the existing code style and structure.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## Acknowledgments
+
+Thanks to the Twitch community and all contributors for inspiring and improving Coneflip.
+
+Thanks to Aquaismissing for valuable feedback and support.
+
+Thanks to the 7TV Staff for providing insight and token to their api.
+
+Happy Streaming! 🎉

@@ -10,7 +10,6 @@
       padding: 0;
       box-sizing: border-box;
     }
-
     .leaderboard-container {
       position: fixed;
       top: 30px;
@@ -23,24 +22,20 @@
       z-index: 1000;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       color: #fff;
-      transition: right 0.8s cubic-bezier(0.25, 0.8, 0.25, 1),
-        opacity 0.5s ease-in-out;
+      transition: right 0.8s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.5s ease-in-out;
       opacity: 0;
       overflow: hidden;
     }
-
     .leaderboard-container.visible {
       right: 20px;
       opacity: 1;
     }
-
     .leaderboard-container h2 {
       font-size: 30px;
       text-align: center;
       margin-bottom: 15px;
       color: #94B658;
     }
-
     .leaderboard-table-wrapper {
       max-height: 400px;
       overflow-x: hidden;
@@ -48,33 +43,27 @@
       scrollbar-width: thin;
       scrollbar-color: #94B658 rgba(255, 255, 255, 0.1);
     }
-
     .leaderboard-table-wrapper::-webkit-scrollbar {
       width: 8px;
     }
-
     .leaderboard-table-wrapper::-webkit-scrollbar-track {
       background: rgba(255, 255, 255, 0.1);
     }
-
     .leaderboard-table-wrapper::-webkit-scrollbar-thumb {
       background-color: #94B658;
       border-radius: 4px;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
       background: transparent;
     }
-
     th,
     td {
       padding: 9px 12px;
       text-align: left;
       font-size: 21px;
     }
-
     th {
       position: sticky;
       top: 0;
@@ -83,7 +72,6 @@
       color: #94B658;
       z-index: 10;
     }
-
     th:after,
     th:before {
       content: '';
@@ -91,26 +79,20 @@
       left: 0;
       width: 100%;
     }
-
     th:after {
       bottom: 0;
       border-bottom: 4px solid #555;
     }
-
     tr:nth-child(even) {
       background: rgba(255, 255, 255, 0.1);
     }
-
     .top-player {
       background: rgba(255, 215, 0, 0.2);
     }
-
- 
     .highlight-target {
-        border: 2px solid #94B658; 
-        box-shadow: 0 0 10px 2px rgba(148, 182, 88, 0.8); 
-      }
-
+      border: 2px solid #94B658; 
+      box-shadow: 0 0 10px 2px rgba(148, 182, 88, 0.8); 
+    }
     .cone_skin {
       display: block;
       width: 50px;
@@ -128,22 +110,22 @@
       mask-position: center center;
       margin-right: 9px;
     }
-
     .text-center {
       text-align: center;
     }
-
     .player-rank {
       color: #94B658;
     }
-
     .placeholder-row {
       color: rgba(255, 255, 255, 0.3);
     }
-    
     .flex_thing {
       display: flex;
       align-items: center;
+    }
+
+    .player_name{
+        font-weight: bold;
     }
   </style>
 </head>
@@ -169,11 +151,15 @@
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    // Global cache for paint data; each entry stores the data and a timestamp.
+    let paintCache = {};
+
     let userSkinsMap = {};
     let skinLibrary = {};
-    let currentTarget = null; // Global variable to store target user name
+    let currentTarget = null;
     let lastLeaderboardData = [];
 
+    // Create placeholder rows for the table body.
     function createTableRows(count) {
       const tbody = document.querySelector("#leaderboard-table tbody");
       tbody.innerHTML = '';
@@ -186,8 +172,49 @@
       }
     }
 
+    // Convert a 32-bit signed integer (from 7TV) into an "rgb(r, g, b)" string.
+    function convertColor(num) {
+      let hexFull = (num >>> 0).toString(16).padStart(8, '0');
+      let hex = hexFull.substring(0, 6);
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    // Build a CSS value based on the 7TV paint object.
+    function getPaintCSS(paint) {
+      if (!paint) return null;
+      if (paint.function === "LINEAR_GRADIENT") {
+        const stops = paint.gradientStops
+          .map(stop => `${convertColor(stop.color)} ${stop.at}`)
+          .join(', ');
+        let angle = "90deg"; // default angle
+        if (paint.gradientAngle && paint.gradientAngle !== "N/A") {
+          angle = paint.gradientAngle + "deg";
+        }
+        return `repeating-linear-gradient(${angle}, ${stops})`;
+      } else if (paint.function === "RADIAL_GRADIENT") {
+        const stops = paint.gradientStops
+          .map(stop => `${convertColor(stop.color)} ${stop.at}`)
+          .join(', ');
+        return `radial-gradient(circle, ${stops})`;
+      } else if (paint.function === "URL") {
+        if (paint.image) {
+          return `url('${paint.image}') no-repeat center/cover`;
+        }
+        return null;
+      } else {
+        if (paint.color && paint.color !== "N/A") {
+          return convertColor(paint.color);
+        }
+        return null;
+      }
+    }
+
+    // Update the leaderboard table rows.
+    // Now uses a cache (paintCache) so that each player's paint data is stored for 10 minutes.
     function updateTable(data) {
-      // Save the latest leaderboard data for possible future updates.
       lastLeaderboardData = data;
       createTableRows(25);
       const rows = document.querySelectorAll("#leaderboard-table tbody tr");
@@ -196,7 +223,6 @@
         if (data[i]) {
           const player = data[i];
           const playerName = player.name || '—';
-          // Save the full player name on the row for later reference.
           row.setAttribute('data-player-name', playerName);
           const isTopPlayer = (i === 0);
           const assignedSkinKey = userSkinsMap[playerName] || 'default';
@@ -205,21 +231,76 @@
             skinIconPath = skinLibrary['gold'];
           }
           const skinIcon = `<div style="background-image: url(${skinIconPath})" class="cone_skin"></div>`;
-
+          
           row.innerHTML = `
               <td class="player-rank text-center">${i + 1}</td>
-              <td class="flex_thing text-center">${skinIcon} ${playerName.substring(0, 18)}</td>
+              <td class="flex_thing text-center">${skinIcon} <span class="player_name">${playerName.substring(0, 18)}</span></td>
               <td class="text-center">${player.wins ?? '—'}</td>
               <td class="text-center">${player.fails ?? '—'}</td>
               <td class="text-center">${player.winrate ?? '—'}</td>
           `;
-
-          // Build the class list based on conditions.
+          
           let classes = [];
           if (isTopPlayer) classes.push('top-player');
-          // If this player matches the current target, add a highlight.
           if (currentTarget && playerName === currentTarget) classes.push('highlight-target');
           row.className = classes.join(' ');
+          
+          // Check if we already have cached paint data for this player and it's less than 10 minutes old.
+          if (paintCache[playerName] && (Date.now() - paintCache[playerName].timestamp < 600000)) {
+            let paintData = paintCache[playerName].data;
+            if (paintData && paintData.function) {
+              const cssValue = getPaintCSS(paintData);
+              if (cssValue) {
+                const nameSpan = row.querySelector('span.player_name');
+                if (nameSpan) {
+                  nameSpan.style.background = cssValue;
+                  nameSpan.style.webkitBackgroundClip = "text";
+                  nameSpan.style.webkitTextFillColor = "transparent";
+                  nameSpan.style.backgroundClip = "text";
+                  nameSpan.style.color = "transparent";
+                  if (paintData.function === "URL") {
+                    nameSpan.style.backgroundSize = "cover";
+                  }
+                }
+              }
+            }
+          } else {
+            // If not cached or expired, fetch the paint data from the API.
+            fetch(`/api/7tv/paint?name=${encodeURIComponent(playerName)}`)
+              .then(response => response.text())
+              .then(text => {
+                if (!text) return null;
+                try {
+                  return JSON.parse(text);
+                } catch (e) {
+                  console.error(`Error parsing JSON for ${playerName}:`, e);
+                  return null;
+                }
+              })
+              .then(paintData => {
+                // Store the fetched data in the cache with the current timestamp.
+                paintCache[playerName] = { data: paintData, timestamp: Date.now() };
+                if (paintData && paintData.function) {
+                  const cssValue = getPaintCSS(paintData);
+                  if (cssValue) {
+                    const nameSpan = row.querySelector('span.player_name');
+                    if (nameSpan) {
+                      nameSpan.style.background = cssValue;
+                      nameSpan.style.webkitBackgroundClip = "text";
+                      nameSpan.style.webkitTextFillColor = "transparent";
+                      nameSpan.style.backgroundClip = "text";
+                      nameSpan.style.color = "transparent";
+                      if (paintData.function === "URL") {
+                        nameSpan.style.backgroundSize = "cover";
+                      }
+                    }
+                  }
+                }
+              })
+              .catch(error => {
+                console.error(`Error fetching paint for ${playerName}:`, error);
+              });
+          }
         }
       }
     }
@@ -269,21 +350,16 @@
     });
 
     socket.on('showLb', (target) => {
-      // Set the current target from the socket event.
       currentTarget = target;
-
-      // Update the table rows to highlight the target user if present.
       const rows = document.querySelectorAll("#leaderboard-table tbody tr");
       rows.forEach(row => {
         const playerName = row.getAttribute('data-player-name');
-        console.log(playerName, currentTarget);
         if (playerName === currentTarget) {
           row.classList.add('highlight-target');
         } else {
           row.classList.remove('highlight-target');
         }
       });
-
       if (isVisible) return;
       const leaderboard = document.querySelector('.leaderboard-container');
       const wrapper = document.querySelector('.leaderboard-table-wrapper');

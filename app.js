@@ -38,7 +38,8 @@ const CONFIG = {
     UNBOX_CONE: process.env.TWITCH_UNBOX_CONE,
     BUY_CONE: process.env.TWITCH_BUY_CONE,
     BOT_NAME: process.env.BOT_NAME,
-    CHANNEL: process.env.TWITCH_CHANNEL
+    CHANNEL: process.env.TWITCH_CHANNEL,
+    SEVENTV_TOKEN: process.env.SEVENTV_TOKEN,
   },
   CACHE_DURATION: 5000,
 };
@@ -156,6 +157,18 @@ app.get('/debug/', async (req, res, next) => {
 });
 
 
+
+app.get('/api/7tv/paint', async (req, res, next) => {
+
+  const name = req.query.name?.toLowerCase().trim() || '';
+
+  try {
+    res.send(await getUserPaintsAndBadge(name));
+
+  } catch (err) {
+    next(err);
+  }
+});
 app.get('/api/cones/add', async (req, res, next) => {
   const name = req.query.name?.toLowerCase().trim() || '';
   if (!name) return res.send('Name cannot be blank or invalid.');
@@ -727,10 +740,158 @@ class SkinsManager {
   }
 }
 
+
+
+// -----------------------------------------------------------------------------
+// 7TV Integration
+// -----------------------------------------------------------------------------
+
+
+async function getUserPaintsAndBadge(twitchUsername) {
+
+
+  try {
+    // Fetch user ID by Twitch username
+    const fetchUserQuery = `
+      query FetchUser($username: String!) {
+        users(query: $username) {
+          id
+          username
+        }
+      }
+    `;
+    const userResponse = await axios.post(
+      'https://7tv.io/v3/gql',
+      {
+        operationName: 'FetchUser',
+        query: fetchUserQuery,
+        variables: { username: twitchUsername }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${CONFIG.TWITCH.SEVENTV_TOKEN}`
+        }
+      }
+    );
+
+    if (userResponse.data.errors || !userResponse.data.data.users.length) {
+      console.error('Error fetching user or user not found:', userResponse.data.errors);
+      return;
+    }
+    const userId = userResponse.data.data.users[0].id;
+
+    // Fetch user paint and badge information using userId
+    const fetchUserPaintQuery = `
+      query GetUserForUserPage($id: ObjectID!) {
+        user(id: $id) {
+          id
+          username
+          display_name
+          avatar_url
+          style {
+            color
+            paint {
+              id
+              kind
+              name
+              function
+              color
+              angle
+              shape
+              image_url
+              repeat
+              stops {
+                at
+                color
+              }
+              shadows {
+                x_offset
+                y_offset
+                radius
+                color
+              }
+            }
+            badge {
+              id
+              kind
+              name
+              tooltip
+              tag
+            }
+          }
+        }
+      }
+    `;
+    const paintResponse = await axios.post(
+      'https://7tv.io/v3/gql',
+      {
+        query: fetchUserPaintQuery,
+        variables: { id: userId }
+      },
+      {
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+
+    if (paintResponse.data.errors) {
+      console.error('GraphQL Errors:', paintResponse.data.errors);
+      return;
+    }
+
+    const userData = paintResponse.data.data.user;
+    if (!userData) {
+      console.error('User data not found.');
+      return;
+    }
+
+    // Format paint details into JSON format
+    let paintDetails;
+    const paint = userData.style.paint;
+    if (!paint) {
+      paintDetails = { message: 'No active paint set.' };
+    } else {
+      paintDetails = {
+        name: paint.name,
+        kind: paint.kind,
+        function: paint.function,
+        shape: paint.shape
+      };
+
+      if (paint.function === 'LINEAR_GRADIENT' || paint.function === 'RADIAL_GRADIENT') {
+        paintDetails.gradientAngle = paint.angle || 'N/A';
+        if (paint.stops && paint.stops.length) {
+          paintDetails.gradientStops = paint.stops.map((stop, index) => ({
+            order: index + 1,
+            at: stop.at * 100 + '%',
+            color: stop.color
+          }));
+        } else {
+          paintDetails.gradientStops = [];
+        }
+      } else {
+        paintDetails.color = paint.color || 'N/A';
+      }
+      if (paint.image_url) {
+        paintDetails.image = paint.image_url;
+      }
+    }
+
+    // Output the paint details in JSON format
+  
+    return paintDetails;
+
+  } catch (error) {
+    console.error('Error in getUserPaintsAndBadge:', error.message);
+  }
+}
+
 // -----------------------------------------------------------------------------
 // SOCKET.IO CONNECTION HANDLER
 // -----------------------------------------------------------------------------
 io.on('connection', async (socket) => {
+
+  
   let topPlayer = null;
   try {
     const data = await LeaderboardManager.getLeaderboard();
