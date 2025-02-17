@@ -4,7 +4,7 @@
 
 | **Command**            | **Description**                                             | **Usage**                               |
 |------------------------|-------------------------------------------------------------|-----------------------------------------|
-| `!leaderboard  [@user]` | View the cone leaderboard.(Highlights you or target)                | `!leaderboard`                          |
+| `!leaderboard  [@user]` | View the cone leaderboard. (Highlights you or target)                | `!leaderboard` or `!leaderboard @username`                   |
 | `!coneflip [@user]`     | Check someone's coneflipping stats.                         | `!coneflip` or `!coneflip @username`      |
 | `!conestats`           | View average leaderboard stats.                             | `!conestats`                            |
 | `!myskins [@user]`      | See your or another user's skin inventory.                  | `!myskins` or `!myskins @username`        |
