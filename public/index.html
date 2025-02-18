@@ -109,7 +109,6 @@
       font-size: 3rem;
       color: #fff;
       font-family: "Space Grotesk", serif;
-
       margin: 0;
     }
 
@@ -249,7 +248,7 @@
       const DEBUG_MODE = false;
       const slowOdds = 30;
 
-      // ----- Paint functions and fallback for name labels -----
+
       function convertColor(num) {
         let hexFull = (num >>> 0).toString(16).padStart(8, '0');
         let hex = hexFull.substring(0, 6);
@@ -288,7 +287,7 @@
         }
       }
 
-      // Fallback using inline SVG if CSS background-clip is not supported
+
       function applySVGGradientToName(nameElem, text, paintData) {
         const svgNS = "http://www.w3.org/2000/svg";
         const gradientId = "grad-" + Math.random().toString(36).substr(2, 9);
@@ -342,9 +341,11 @@
         nameElem.appendChild(svg);
       }
 
-      // Function to fetch and apply paint to the inner text of a name element.
+
       function applyPaintToName(nameElement, playerName) {
         nameElement.style.display = "inline-block";
+        nameElement.style.opacity = "0";
+        nameElement.style.transition = "opacity 0.5s ease";
         fetch(`/api/7tv/paint?name=${encodeURIComponent(playerName)}`)
           .then(response => response.text())
           .then(text => {
@@ -374,13 +375,21 @@
                 }
               }
             }
+      
+            setTimeout(() => {
+              nameElement.style.opacity = "1";
+            }, 10);
           })
           .catch(error => {
             console.error(`Error fetching paint for ${playerName}:`, error);
+          
+            setTimeout(() => {
+              nameElement.style.opacity = "1";
+            }, 10);
           });
       }
 
-      // ----- End Paint functions -----
+
 
       const {
         Engine,
@@ -725,7 +734,6 @@
           
           const container = document.getElementById('winner-container');
           const playerNameElem = document.getElementById('winner-player-name');
-          // Wrap only the winner's name in a span with class 'winner-name'
           playerNameElem.innerHTML = "Winner: <br><span class='winner-name'>" + winnerName + "</span>";
           // Apply the 7TV paint to that span
           let winnerSpan = playerNameElem.querySelector('.winner-name');
@@ -898,15 +906,20 @@
           Body.setStatic(this.body, true);
           Composite.add(this.world, this.body);
 
-          // Create an outer wrapper for the name label (to preserve the semi-transparent background)
           this.nameWrapper = document.createElement('span');
           this.nameWrapper.className = 'userName';
           document.body.appendChild(this.nameWrapper);
-          // Create an inner span for the text that will receive the paint
+
+          this.nameWrapper.style.opacity = "0";
+          setTimeout(() => {
+            this.nameWrapper.style.opacity = "1";
+          }, 300);
+
+         
           this.nameText = document.createElement('span');
           this.nameText.textContent = name;
           this.nameWrapper.appendChild(this.nameText);
-          // Apply 7TV paint to the inner text only
+
           applyPaintToName(this.nameText, name);
 
           if (texture.includes('holo_')) {
@@ -924,6 +937,11 @@
             this.element.className = 'cone';
           }
           document.body.appendChild(this.element);
+
+          this.element.style.opacity = "0";
+          setTimeout(() => {
+            this.element.style.opacity = "1";
+          }, 300);
 
           this.updateNameLabelPosition();
         }

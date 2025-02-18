@@ -151,7 +151,7 @@
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    // Global cache for paint data; each entry stores the data and a timestamp.
+ 
     let paintCache = {};
 
     let userSkinsMap = {};
@@ -159,7 +159,7 @@
     let currentTarget = null;
     let lastLeaderboardData = [];
 
-    // Create placeholder rows for the table body.
+
     function createTableRows(count) {
       const tbody = document.querySelector("#leaderboard-table tbody");
       tbody.innerHTML = '';
@@ -182,7 +182,7 @@
       return `rgb(${r}, ${g}, ${b})`;
     }
 
-    // Build a CSS value based on the 7TV paint object.
+   
     function getPaintCSS(paint) {
       if (!paint) return null;
       if (paint.function === "LINEAR_GRADIENT") {
@@ -212,8 +212,7 @@
       }
     }
 
-    // Update the leaderboard table rows.
-    // Now uses a cache (paintCache) so that each player's paint data is stored for 10 minutes.
+
     function updateTable(data) {
       lastLeaderboardData = data;
       createTableRows(25);
@@ -245,7 +244,7 @@
           if (currentTarget && playerName === currentTarget) classes.push('highlight-target');
           row.className = classes.join(' ');
           
-          // Check if we already have cached paint data for this player and it's less than 10 minutes old.
+
           if (paintCache[playerName] && (Date.now() - paintCache[playerName].timestamp < 600000)) {
             let paintData = paintCache[playerName].data;
             if (paintData && paintData.function) {
