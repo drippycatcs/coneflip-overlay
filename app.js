@@ -748,8 +748,6 @@ class SkinsManager {
 
 
 async function getUserPaintsAndBadge(twitchUsername) {
-
-
   try {
     // Fetch user ID by Twitch username
     const fetchUserQuery = `
@@ -872,19 +870,35 @@ async function getUserPaintsAndBadge(twitchUsername) {
       } else {
         paintDetails.color = paint.color || 'N/A';
       }
+
       if (paint.image_url) {
         paintDetails.image = paint.image_url;
       }
+      
+  
+      if (paint.shadows && paint.shadows.length) {
+        paintDetails.shadows = paint.shadows.map(shadow => ({
+          x_offset: shadow.x_offset,
+          y_offset: shadow.y_offset,
+          radius: shadow.radius,
+          color: shadow.color
+        }));
+      } else {
+        paintDetails.shadows = [];
+      }
     }
 
-    // Output the paint details in JSON format
-  
+
     return paintDetails;
 
   } catch (error) {
     console.error('Error in getUserPaintsAndBadge:', error.message);
+    throw error;
   }
 }
+
+
+
 
 // -----------------------------------------------------------------------------
 // SOCKET.IO CONNECTION HANDLER

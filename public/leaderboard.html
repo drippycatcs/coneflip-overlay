@@ -123,9 +123,24 @@
       display: flex;
       align-items: center;
     }
-
-    .player_name{
-        font-weight: bold;
+  
+    .player_name_wrapper {
+      position: relative;
+      display: inline-block;
+    }
+    .player_name_shadow {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      display: none;
+    }
+    .player_name_text {
+      position: relative;
+      z-index: 2;
+    }
+    .player_name {
+      font-weight: 500;
     }
   </style>
 </head>
@@ -151,14 +166,11 @@
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script>
- 
     let paintCache = {};
-
     let userSkinsMap = {};
     let skinLibrary = {};
     let currentTarget = null;
     let lastLeaderboardData = [];
-
 
     function createTableRows(count) {
       const tbody = document.querySelector("#leaderboard-table tbody");
@@ -182,14 +194,14 @@
       return `rgb(${r}, ${g}, ${b})`;
     }
 
-   
     function getPaintCSS(paint) {
       if (!paint) return null;
       if (paint.function === "LINEAR_GRADIENT") {
         const stops = paint.gradientStops
           .map(stop => `${convertColor(stop.color)} ${stop.at}`)
           .join(', ');
-        let angle = "90deg"; // default angle
+        let angle = "90deg"; 
+      
         if (paint.gradientAngle && paint.gradientAngle !== "N/A") {
           angle = paint.gradientAngle + "deg";
         }
@@ -212,7 +224,6 @@
       }
     }
 
-
     function updateTable(data) {
       lastLeaderboardData = data;
       createTableRows(25);
@@ -231,9 +242,16 @@
           }
           const skinIcon = `<div style="background-image: url(${skinIconPath})" class="cone_skin"></div>`;
           
+ 
           row.innerHTML = `
               <td class="player-rank text-center">${i + 1}</td>
-              <td class="flex_thing text-center">${skinIcon} <span class="player_name">${playerName.substring(0, 18)}</span></td>
+              <td class="flex_thing text-center">
+                ${skinIcon} 
+                <span class="player_name_wrapper">
+                  <span class="player_name_shadow player_name">${playerName.substring(0, 18)}</span>
+                  <span class="player_name_text player_name">${playerName.substring(0, 18)}</span>
+                </span>
+              </td>
               <td class="text-center">${player.wins ?? '—'}</td>
               <td class="text-center">${player.fails ?? '—'}</td>
               <td class="text-center">${player.winrate ?? '—'}</td>
@@ -243,28 +261,54 @@
           if (isTopPlayer) classes.push('top-player');
           if (currentTarget && playerName === currentTarget) classes.push('highlight-target');
           row.className = classes.join(' ');
-          
 
-          if (paintCache[playerName] && (Date.now() - paintCache[playerName].timestamp < 600000)) {
-            let paintData = paintCache[playerName].data;
+ 
+          const applyPaintStyles = (paintData) => {
+            const nameTextSpan = row.querySelector('.player_name_text');
+            const nameShadowSpan = row.querySelector('.player_name_shadow');
             if (paintData && paintData.function) {
               const cssValue = getPaintCSS(paintData);
               if (cssValue) {
-                const nameSpan = row.querySelector('span.player_name');
-                if (nameSpan) {
-                  nameSpan.style.background = cssValue;
-                  nameSpan.style.webkitBackgroundClip = "text";
-                  nameSpan.style.webkitTextFillColor = "transparent";
-                  nameSpan.style.backgroundClip = "text";
-                  nameSpan.style.color = "transparent";
-                  if (paintData.function === "URL") {
-                    nameSpan.style.backgroundSize = "cover";
-                  }
+
+                nameTextSpan.style.background = cssValue;
+                nameTextSpan.style.webkitBackgroundClip = "text";
+                nameTextSpan.style.backgroundClip = "text";
+                nameTextSpan.style.webkitTextFillColor = "transparent";
+                nameTextSpan.style.color = "transparent";
+                if (paintData.function === "URL") {
+                  nameTextSpan.style.backgroundSize = "cover";
+                }
+          
+                if (paintData.shadows && Array.isArray(paintData.shadows) && paintData.shadows.length > 0) {
+                  const textShadowValue = paintData.shadows
+                    .map(shadow => `${shadow.x_offset}px ${shadow.y_offset}px ${shadow.radius}px ${convertColor(shadow.color)}`)
+                    .join(', ');
+                  nameShadowSpan.style.textShadow = textShadowValue;
+                  nameShadowSpan.style.display = "inline";
+                } else {
+                  nameShadowSpan.style.display = "none";
+                  nameTextSpan.style.webkitTextStroke = "0px";
                 }
               }
+            } else {
+              nameTextSpan.style.background = "";
+              nameTextSpan.style.webkitBackgroundClip = "";
+              nameTextSpan.style.backgroundClip = "";
+              nameTextSpan.style.webkitTextFillColor = "";
+              nameTextSpan.style.color = "white";
+              nameTextSpan.style.backgroundSize = "";
+              nameTextSpan.style.webkitTextStroke = "";
+              nameShadowSpan.style.textShadow = "";
+              nameShadowSpan.style.display = "none";
             }
+          };
+
+          // Use cached paint data if available and fresh.
+          if (paintCache[playerName] && (Date.now() - paintCache[playerName].timestamp < 600000)) {
+            let paintData = paintCache[playerName].data;
+            applyPaintStyles(paintData);
           } else {
-            // If not cached or expired, fetch the paint data from the API.
+            // Otherwise, fetch the paint data.
             fetch(`/api/7tv/paint?name=${encodeURIComponent(playerName)}`)
               .then(response => response.text())
               .then(text => {
@@ -277,24 +321,8 @@
                 }
               })
               .then(paintData => {
-                // Store the fetched data in the cache with the current timestamp.
                 paintCache[playerName] = { data: paintData, timestamp: Date.now() };
-                if (paintData && paintData.function) {
-                  const cssValue = getPaintCSS(paintData);
-                  if (cssValue) {
-                    const nameSpan = row.querySelector('span.player_name');
-                    if (nameSpan) {
-                      nameSpan.style.background = cssValue;
-                      nameSpan.style.webkitBackgroundClip = "text";
-                      nameSpan.style.webkitTextFillColor = "transparent";
-                      nameSpan.style.backgroundClip = "text";
-                      nameSpan.style.color = "transparent";
-                      if (paintData.function === "URL") {
-                        nameSpan.style.backgroundSize = "cover";
-                      }
-                    }
-                  }
-                }
+                applyPaintStyles(paintData);
               })
               .catch(error => {
                 console.error(`Error fetching paint for ${playerName}:`, error);

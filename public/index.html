@@ -52,6 +52,23 @@
       background-clip: text;
     }
 
+    /* New CSS for layered painted names */
+    .paint-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+    .paint-shadow {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      display: none;
+    }
+    .paint-text {
+      position: relative;
+      z-index: 2;
+    }
+
     #celebration-container {
       display: block;
       position: fixed;
@@ -288,6 +305,97 @@
       }
 
 
+      function applyPaintToName(nameElement, playerName) {
+        if (!nameElement.querySelector('.paint-wrapper')) {
+          let originalText = nameElement.textContent;
+          nameElement.innerHTML = "";
+          let wrapper = document.createElement('span');
+          wrapper.className = 'paint-wrapper';
+          let shadowSpan = document.createElement('span');
+          shadowSpan.className = 'paint-shadow';
+          shadowSpan.textContent = originalText;
+          let textSpan = document.createElement('span');
+          textSpan.className = 'paint-text';
+          textSpan.textContent = originalText;
+          wrapper.appendChild(shadowSpan);
+          wrapper.appendChild(textSpan);
+          nameElement.appendChild(wrapper);
+        }
+
+        let wrapper = nameElement.querySelector('.paint-wrapper');
+        let textSpan = wrapper.querySelector('.paint-text');
+        let shadowSpan = wrapper.querySelector('.paint-shadow');
+
+   
+        nameElement.style.display = "inline-block";
+        nameElement.style.opacity = "0";
+        nameElement.style.transition = "opacity 0.5s ease";
+
+        fetch(`/api/7tv/paint?name=${encodeURIComponent(playerName)}`)
+          .then(response => response.text())
+          .then(text => {
+            if (!text) return null;
+            try {
+              return JSON.parse(text);
+            } catch (e) {
+              console.error(`Error parsing JSON for ${playerName}:`, e);
+              return null;
+            }
+          })
+          .then(paintData => {
+            if (paintData && paintData.function) {
+              const cssValue = getPaintCSS(paintData);
+              if (cssValue) {
+                if (typeof CSS !== "undefined" && CSS.supports && CSS.supports("-webkit-background-clip", "text")) {
+
+                  textSpan.style.background = cssValue;
+                  textSpan.style.webkitBackgroundClip = "text";
+                  textSpan.style.backgroundClip = "text";
+                  textSpan.style.webkitTextFillColor = "transparent";
+                  textSpan.style.color = "transparent";
+                  if (paintData.function === "URL") {
+                    textSpan.style.backgroundSize = "cover";
+                  }
+       
+                  if (paintData.shadows && Array.isArray(paintData.shadows) && paintData.shadows.length > 0) {
+                    const multiplier = nameElement.classList.contains('winner-name') ? 2 : 1;
+                    const textShadowValue = paintData.shadows
+                      .map(shadow => `${shadow.x_offset * multiplier}px ${shadow.y_offset * multiplier}px ${shadow.radius * multiplier}px ${convertColor(shadow.color)}`)
+                      .join(', ');
+                    shadowSpan.style.textShadow = textShadowValue;
+                    shadowSpan.style.display = "inline";
+                  } else {
+                    shadowSpan.style.display = "none";
+                    textSpan.style.webkitTextStroke = "0px";
+                  }
+                } else {
+                  applySVGGradientToName(nameElement, nameElement.textContent, paintData);
+                }
+              }
+            } else {
+              textSpan.style.background = "";
+              textSpan.style.webkitBackgroundClip = "";
+              textSpan.style.backgroundClip = "";
+              textSpan.style.webkitTextFillColor = "";
+              textSpan.style.color = "white";
+              textSpan.style.backgroundSize = "";
+              textSpan.style.webkitTextStroke = "";
+              shadowSpan.style.textShadow = "";
+              shadowSpan.style.display = "none";
+            }
+      
+            setTimeout(() => {
+              nameElement.style.opacity = "1";
+            }, 10);
+          })
+          .catch(error => {
+            console.error(`Error fetching paint for ${playerName}:`, error);
+            setTimeout(() => {
+              nameElement.style.opacity = "1";
+            }, 10);
+          });
+      }
+
       function applySVGGradientToName(nameElem, text, paintData) {
         const svgNS = "http://www.w3.org/2000/svg";
         const gradientId = "grad-" + Math.random().toString(36).substr(2, 9);
@@ -340,56 +448,6 @@
         nameElem.innerHTML = "";
         nameElem.appendChild(svg);
       }
-
-
-      function applyPaintToName(nameElement, playerName) {
-        nameElement.style.display = "inline-block";
-        nameElement.style.opacity = "0";
-        nameElement.style.transition = "opacity 0.5s ease";
-        fetch(`/api/7tv/paint?name=${encodeURIComponent(playerName)}`)
-          .then(response => response.text())
-          .then(text => {
-            if (!text) return null;
-            try {
-              return JSON.parse(text);
-            } catch (e) {
-              console.error(`Error parsing JSON for ${playerName}:`, e);
-              return null;
-            }
-          })
-          .then(paintData => {
-            if (paintData && paintData.function) {
-              const cssValue = getPaintCSS(paintData);
-              if (cssValue) {
-                if (typeof CSS !== "undefined" && CSS.supports && CSS.supports("-webkit-background-clip", "text")) {
-                  nameElement.style.background = cssValue;
-                  nameElement.style.webkitBackgroundClip = "text";
-                  nameElement.style.webkitTextFillColor = "transparent";
-                  nameElement.style.backgroundClip = "text";
-                  nameElement.style.color = "transparent";
-                  if (paintData.function === "URL") {
-                    nameElement.style.backgroundSize = "cover";
-                  }
-                } else {
-                  applySVGGradientToName(nameElement, nameElement.textContent, paintData);
-                }
-              }
-            }
-      
-            setTimeout(() => {
-              nameElement.style.opacity = "1";
-            }, 10);
-          })
-          .catch(error => {
-            console.error(`Error fetching paint for ${playerName}:`, error);
-          
-            setTimeout(() => {
-              nameElement.style.opacity = "1";
-            }, 10);
-          });
-      }
-
-
 
       const {
         Engine,
@@ -915,11 +973,11 @@
             this.nameWrapper.style.opacity = "1";
           }, 300);
 
-         
           this.nameText = document.createElement('span');
           this.nameText.textContent = name;
           this.nameWrapper.appendChild(this.nameText);
 
+          // Apply the new layered paint+shadow logic.
           applyPaintToName(this.nameText, name);
 
           if (texture.includes('holo_')) {
