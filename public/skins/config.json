@@ -102,6 +102,13 @@
     }
     ,
     {
+        "name": "lavalamp",
+        "visuals": "cone_lavalamp.webp",
+        "canUnbox": true,
+        "unboxWeight": 9
+    }
+    ,
+    {
         "name": "subcone",
         "visuals": "cone_sub.webp",
         "canUnbox": false
