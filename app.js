@@ -74,6 +74,14 @@ app.get('/leaderboard', (req, res, next) => {
   }
 });
 
+app.get('/gamba', (req, res, next) => {
+  try {
+    res.sendFile(path.join(CONFIG.PATHS.PUBLIC, 'unbox.html'));
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get('/api/leaderboard', async (req, res, next) => {
   const name = req.query.name?.toLowerCase().trim() || '';
   const show = req.query.show === 'true';
@@ -147,9 +155,10 @@ app.get('/api/skins/give', async (req, res, next) => {
 app.get('/debug/', async (req, res, next) => {
 
   const name = req.query.name?.toLowerCase().trim() || '';
-  const skin = req.query.skin?.toLowerCase().trim() || '';
+
   try {
-    res.send(`tier ${await commandSkinsSwap(name,skin)}`);
+    await SkinsManager.setRandomSkin(name);
+    res.sendStatus(200);
 
   } catch (err) {
     next(err);
@@ -716,10 +725,13 @@ class SkinsManager {
         const stmt = this.db.prepare('SELECT inventory FROM user_skins WHERE name = ?');
         const user = stmt.get(name);
         let inventory = user && user.inventory ? user.inventory.split(',').map(s => s.trim()) : [];
+ 
         if (inventory.includes(skin.name)) {
-          return `${name} unboxed "${skin.name}" ... again GAGAGA better luck next time.`;
+          io.emit('unboxSkinAnim', skin.name , name ,`${name} unboxed "${skin.name}" ... again (${odds}%) GAGAGA Better luck next time... `);
+          return `${name} unboxed "${skin.name}" ... again GAGAGA better luck next time (${odds}%)..`;
         } else {
           await this.setSkin(name, skin.name);
+          io.emit('unboxSkinAnim', skin.name , name , `${name} unboxed "${skin.name}" skin (${odds}%).`);
           return `${name} unboxed "${skin.name}" skin (${odds}%).`;
         }
       }
@@ -928,6 +940,7 @@ io.on('connection', async (socket) => {
     };
     socket.on('win', (name) => updateStateHandler(name, true));
     socket.on('fail', (name) => updateStateHandler(name, false));
+    socket.on('unboxfinished' , (message) =>  sendChatMessage(CONFIG.TWITCH.CHANNEL, message));
   } catch (err) {
     console.error('Socket connection error:', err);
   }
@@ -1103,7 +1116,7 @@ async function handleUnboxConeReward(redemption) {
     console.log(`[Reward: Unbox Cone] ${user.display_name} redeemed unbox cone and got: "${result}"`);
     io.emit('unboxConeReward', { name, result });
     io.emit('skinRefresh');
-    sendChatMessage(CONFIG.TWITCH.CHANNEL, result);
+ 
   } catch (error) {
     console.error('Error handling unbox cone reward:', error);
     sendChatMessage(CONFIG.TWITCH.CHANNEL, `${user.display_name}, an error occurred during unbox cone reward.`);

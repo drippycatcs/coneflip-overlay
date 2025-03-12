@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cone Unboxing Simulator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      background: transparent;
+      overflow: hidden;
+      height: 170vh;
+    display: flex
+;
+    align-items: center;
+    justify-content: center;
+
+
+    }
+    /* Overlay container positioned 15% from the bottom, centered, with fade in/out */
+    #unboxOverlay {
+      display: none;
+
+      width: 70vw;
+      transform: scale(0.6);
+      max-width: 1000px;
+      z-index: 1000;
+      transition: opacity 0.5s ease;
+      opacity: 0;
+    }
+    #unboxOverlay.show {
+      opacity: 1;
+    }
+    /* Main container for unbox animation and text */
+    #unboxContainer {
+     
+      background-color: #181818;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
+      width: 100%;
+      max-width: 1000px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    /* Header and footer areas have fixed height to reserve space */
+    #unboxHeader, #unboxFooter {
+      width: 100%;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #unboxUserName {
+      font-size: 35px;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 1px 1px 2px #000;
+    }
+    #result {
+      font-size: 35px;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 1px 1px 3px #000;
+    }
+    /* Container for the animation itself */
+    #animationContainer {
+      width: 100%;
+      height: 200px;
+      position: relative;
+    }
+    #caseContainer {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #222;
+      border: 2px solid #444;
+      border-radius: 5px;
+      position: relative;
+      margin: 0 auto;
+    }
+    #itemRibbon {
+      display: flex;
+      position: absolute;
+      height: 100%;
+    }
+    .item {
+      width: 150px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #333;
+      color: white;
+      margin: 5px;
+      border-radius: 5px;
+      padding-bottom: 5px;
+      position: relative;
+    }
+    .item img {
+      max-width: 100px;
+      max-height: 100px;
+    }
+    .item span {
+      font-size: 14px;
+      margin-top: 5px;
+      font-weight: bold;
+    }
+    .rarity-line {
+      width: 100%;
+      height: 5px;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      border-radius: 0 0 5px 5px;
+    }
+    #pointer {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 4px;
+      height: 100%;
+      background-color: #ff5500;
+      transform: translateX(-50%);
+      z-index: 1010;
+    }
+  </style>
+</head>
+<body>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Overlay container with fixed header, animation area, and footer -->
+  <div id="unboxOverlay">
+    <div id="unboxContainer">
+      <div id="unboxHeader">
+        <span id="unboxUserName"></span>
+      </div>
+      <div id="animationContainer">
+        <div id="caseContainer">
+          <div id="pointer"></div>
+          <div id="itemRibbon"></div>
+        </div>
+      </div>
+      <div id="unboxFooter">
+        <span id="result"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Socket.io connection
+    const socket = io();
+    // Queue system for unbox animations
+    const unboxQueue = [];
+    let isAnimating = false;
+    
+    // Listen for the 'unboxSkinAnim' event which sends skin, userName, and message.
+    socket.on('unboxSkinAnim', (skin, userName, message) => {
+      queueUnbox(skin, userName, message);
+    });
+
+    // CS:GO-like rarity colors
+    const rarityColors = {
+      consumer: "#4A69FF",
+      restricted: "#8847ff",
+      classified: "#d32ce6",
+      covert: "#eb4b4b"
+    };
+
+    // Assign rarity based on unboxWeight.
+    function assignRarity(weight) {
+      if (weight >= 30) return { label: "Consumer Grade", color: rarityColors.consumer };
+      if (weight >= 15) return { label: "Restricted", color: rarityColors.restricted };
+      if (weight >= 9)  return { label: "Classified", color: rarityColors.classified };
+      return { label: "Covert", color: rarityColors.covert };
+    }
+
+    // Global array to hold unboxable cones.
+    let cones = [];
+
+    // Fetch cone configuration from external JSON file.
+    fetch('/skins/docs.json')
+      .then(response => response.json())
+      .then(data => {
+        cones = data
+          .filter(cone => cone.canUnbox)
+          .map(cone => {
+            const rarity = assignRarity(cone.unboxWeight || 0);
+            return {
+              ...cone,
+              rarityLabel: rarity.label,
+              rarityColor: rarity.color,
+              imageUrl: `/skins/${cone.visuals}`
+            };
+          });
+      })
+      .catch(error => {
+        console.error('Error loading JSON:', error);
+      });
+
+    // Select a cone using weighted random selection for filler items.
+    function getWeightedRandomCone() {
+      const total = cones.reduce((sum, cone) => sum + (cone.unboxWeight || 0), 0);
+      let random = Math.random() * total;
+      for (let cone of cones) {
+        random -= cone.unboxWeight;
+        if (random <= 0) return cone;
+      }
+      return cones[cones.length - 1];
+    }
+
+    // Returns a weighted random cone not matching lastConeName.
+    function getNonDuplicateWeightedRandomCone(lastConeName) {
+      let cone;
+      let attempts = 0;
+      do {
+        cone = getWeightedRandomCone();
+        attempts++;
+      } while (lastConeName && cone.name.toLowerCase() === lastConeName.toLowerCase() && attempts < 10);
+      return cone;
+    }
+
+    // Generate an array of filler cones ensuring no two consecutive items share the same name.
+    function generateFillerItems(count, initialLastName) {
+      const fillerItems = [];
+      let lastName = initialLastName;
+      for (let i = 0; i < count; i++) {
+        const fillerCone = getNonDuplicateWeightedRandomCone(lastName);
+        fillerItems.push(fillerCone);
+        lastName = fillerCone.name;
+      }
+      return fillerItems;
+    }
+
+    // Create an element for a single cone item.
+    function createItemElement(cone) {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.setAttribute("data-name", cone.name);
+      div.innerHTML = `
+        <img src="${cone.imageUrl}" alt="${cone.name}">
+        <div class="rarity-line" style="background-color: ${cone.rarityColor}"></div>
+      `;
+      return div;
+    }
+
+    // Generate the item ribbon: 20 filler items, the winning cone, then 5 filler items.
+    function generateRibbon(winningCone) {
+      const itemRibbon = document.getElementById("itemRibbon");
+      itemRibbon.innerHTML = "";
+
+      // Generate 20 filler items before the winning cone.
+      const fillerBefore = generateFillerItems(20, null);
+      if (fillerBefore.length > 0 && fillerBefore[fillerBefore.length - 1].name.toLowerCase() === winningCone.name.toLowerCase()) {
+        let previousName = fillerBefore.length > 1 ? fillerBefore[fillerBefore.length - 2].name : null;
+        let newCone = getNonDuplicateWeightedRandomCone(previousName);
+        while (newCone.name.toLowerCase() === winningCone.name.toLowerCase()) {
+          newCone = getNonDuplicateWeightedRandomCone(previousName);
+        }
+        fillerBefore[fillerBefore.length - 1] = newCone;
+      }
+
+      // Generate 5 filler items after the winning cone.
+      const fillerAfter = generateFillerItems(5, winningCone.name);
+
+      fillerBefore.forEach(cone => itemRibbon.appendChild(createItemElement(cone)));
+      itemRibbon.appendChild(createItemElement(winningCone));
+      fillerAfter.forEach(cone => itemRibbon.appendChild(createItemElement(cone)));
+    }
+
+    // Fade out and hide the overlay, then process the next item in the queue.
+    function resetUI() {
+      const overlay = document.getElementById("unboxOverlay");
+      const itemRibbon = document.getElementById("itemRibbon");
+      const resultSpan = document.getElementById("result");
+      const userNameSpan = document.getElementById("unboxUserName");
+
+      itemRibbon.style.transition = "";
+      itemRibbon.style.transform = "";
+      itemRibbon.innerHTML = "";
+      resultSpan.textContent = "";
+      userNameSpan.textContent = "";
+
+      overlay.classList.remove("show");
+      setTimeout(() => {
+        overlay.style.display = "none";
+        isAnimating = false;
+        processQueue();
+      }, 500);
+    }
+
+    // Queue an unbox request.
+    function queueUnbox(skin, userName, message) {
+      unboxQueue.push({ skin, userName, message });
+      processQueue();
+    }
+
+    // Process the next unbox in the queue if not currently animating.
+    function processQueue() {
+      if (!isAnimating && unboxQueue.length > 0) {
+        const next = unboxQueue.shift();
+        isAnimating = true;
+        unboxAnimation(next.skin, next.userName, next.message);
+      }
+    }
+
+    // Main unbox animation function.
+    function unboxAnimation(skinName, userName, message) {
+      if (cones.length === 0) {
+        console.error("Cones not loaded yet. Try again later.");
+        isAnimating = false;
+        return;
+      }
+
+      const winningCone = cones.find(cone => cone.name.toLowerCase() === skinName.toLowerCase());
+      if (!winningCone) {
+        console.error(`Cone with name "${skinName}" not found.`);
+        isAnimating = false;
+        return;
+      }
+
+      const overlay = document.getElementById("unboxOverlay");
+      overlay.style.display = "block";
+      setTimeout(() => {
+        overlay.classList.add("show");
+      }, 10);
+
+      // Set unboxer's name in the header (space is pre-allocated)
+      document.getElementById("unboxUserName").textContent = `Unboxing by: ${userName}`;
+      generateRibbon(winningCone);
+
+      const totalWeight = cones.reduce((sum, cone) => sum + (cone.unboxWeight || 0), 0);
+      const odds = ((winningCone.unboxWeight / totalWeight) * 100).toFixed(2);
+
+      // Wait 1 second after the overlay fades in before starting the roll animation.
+      setTimeout(() => {
+        const containerWidth = document.getElementById("caseContainer").offsetWidth;
+        const itemWidth = 160; // Approximate width per item (including margins)
+        const winningIndex = 20;
+        const pointerOffset = containerWidth / 2;
+        const winningConeCenter = itemWidth * winningIndex + itemWidth / 2;
+        const winningPosition = pointerOffset - winningConeCenter;
+
+        const itemRibbon = document.getElementById("itemRibbon");
+        itemRibbon.style.transition = "transform 5s cubic-bezier(0.25, 1, 0.5, 1)";
+        itemRibbon.style.transform = `translateX(${winningPosition}px)`;
+
+        // After the animation ends, display the result in the footer.
+        setTimeout(() => {
+          document.getElementById("result").innerHTML = `
+            You unboxed:<span style="color: ${winningCone.rarityColor}"> ${winningCone.name}</span>
+          `;
+          // Emit finish event after a short delay then reset the UI.
+          setTimeout(() => {
+         setTimeout(() => socket.emit('unboxfinished', message), 1000);
+            resetUI();
+          }, 3000);
+        }, 5000);
+      }, 1000); // 1000 ms wait after fade in
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+[
+    {
+        "name": "default",
+        "visuals": "cone_default.png",
+        "canUnbox": false
+    },
+    {
+        "name": "gold",
+        "visuals": "cone_gold.png",
+        "canUnbox": false
+    },
+    {
+        "name": "glorp",
+        "visuals": "cone_glorp.png",
+        "canUnbox": true,
+        "unboxWeight": 30
+    },
+    {
+        "name": "inverted",
+        "visuals": "cone_inverted.png",
+        "canUnbox": true,
+        "unboxWeight": 30
+    },
+    {
+        "name": "poorlydrawn",
+        "visuals": "cone_poorlydrawn.png",
+        "canUnbox": true,
+        "unboxWeight": 30
+    },
+    {
+        "name": "negative",
+        "visuals": "cone_negative.png",
+        "canUnbox": true,
+        "unboxWeight": 30
+    },
+    {
+        "name": "comic",
+        "visuals": "cone_comic.png",
+        "canUnbox": true,
+        "unboxWeight": 30
+    },
+    {
+        "name": "casehardened",
+        "visuals": "cone_casehardened.png",
+        "canUnbox": true,
+        "unboxWeight": 30
+    },
+    {
+        "name": "tigertooth",
+        "visuals": "cone_tigertooth.png",
+        "canUnbox": true,
+        "unboxWeight": 15
+    },
+    {
+        "name": "ahegao",
+        "visuals": "cone_ahegao.png",
+        "canUnbox": true,
+        "unboxWeight": 15
+    },
+    {
+        "name": "fade",
+        "visuals": "cone_fade.png",
+        "canUnbox": true,
+        "unboxWeight": 15
+    },
+    {
+        "name": "printstream",
+        "visuals": "cone_printstream.png",
+        "canUnbox": true,
+        "unboxWeight": 15
+    },
+    {
+        "name": "rainbow",
+        "visuals": "cone_rainbow.webp",
+        "canUnbox": true,
+        "unboxWeight": 9
+    },
+    {
+        "name": "alarm",
+        "visuals": "cone_alarm.webp",
+        "canUnbox": true,
+        "unboxWeight": 9
+    },
+    {
+        "name": "darkmatter",
+        "visuals": "holo_darkmatter.png",
+        "canUnbox": true,
+        "unboxWeight": 3
+    },
+    {
+        "name": "iridescent",
+        "visuals": "holo_iridescent.png",
+        "canUnbox": true,
+        "unboxWeight": 3
+    }
+    ,
+    {
+        "name": "mongolia",
+        "visuals": "cone_mongolia.webp",
+        "canUnbox": true,
+        "unboxWeight": 9
+    }
+    ,
+    {
+        "name": "subcone",
+        "visuals": "cone_sub.webp",
+        "canUnbox": false
+    },
+    {
+        "name": "om",
+        "visuals": "cone_om.webp",
+        "canUnbox": false
+    }
+]
+
