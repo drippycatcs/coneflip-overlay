@@ -52,6 +52,12 @@
         "unboxWeight": 30
     },
     {
+        "name": "rust",
+        "visuals": "cone_rust.png",
+        "canUnbox": true,
+        "unboxWeight": 30
+    },
+    {
         "name": "tigertooth",
         "visuals": "cone_tigertooth.png",
         "canUnbox": true,

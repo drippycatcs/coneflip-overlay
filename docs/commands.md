@@ -33,6 +33,7 @@ Below is a list of all available **Cone Skins** in the game.
 | Gold            | ![Gold](public/skins/cone_gold.webp)             | **ULTRA RARE** (1st place on LB)            |
 | Subcone         | ![Subcone](public/skins/cone_sub.webp)           | **ULTRA MEGA SUPER** (SUB TO CHANNEL TO GET) |
 | Xmas         | ![Subcone](public/skins/cone_xmas.webp)           | **SEASONAL** |
+| Rust          | ![Glorp](public/skins/cone_rust.png)           | **Common** (30%)                            |
 | Glorp           | ![Glorp](public/skins/cone_glorp.png)           | **Common** (30%)                            |
 | Inverted        | ![Inverted](public/skins/cone_inverted.png)     | **Common** (30%)                            |
 | Poorly Drawn    | ![Poorly Drawn](public/skins/cone_poorlydrawn.png)| **Common** (30%)                           |
