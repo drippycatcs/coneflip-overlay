@@ -6,7 +6,7 @@
     },
     {
         "name": "gold",
-        "visuals": "cone_gold.png",
+        "visuals": "cone_gold.webp",
         "canUnbox": false
     },
     {

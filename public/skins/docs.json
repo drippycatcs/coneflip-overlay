@@ -22,6 +22,12 @@
         "unboxWeight": 30
     },
     {
+        "name": "cheese",
+        "visuals": "cone_cheese.png",
+        "canUnbox": true,
+        "unboxWeight": 30
+    },
+    {
         "name": "poorlydrawn",
         "visuals": "cone_poorlydrawn.png",
         "canUnbox": true,

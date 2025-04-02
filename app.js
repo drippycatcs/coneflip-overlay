@@ -12,6 +12,11 @@ const socketIo = require('socket.io');
 const tmi = require('tmi.js');
 const e = require('express');
 
+// EventSub dependencies
+const { EventSubWsListener } = require('@twurple/eventsub-ws');
+const { ApiClient } = require('@twurple/api');
+const { StaticAuthProvider } = require('@twurple/auth');
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
@@ -133,9 +138,6 @@ app.get('/api/skins/available', async (req, res, next) => {
 });
 
 app.get('/api/skins/give', async (req, res, next) => {
-
-
-
   const name = req.query.name?.toLowerCase().trim() || '';
   const skin = req.query.skin?.toLowerCase().trim() || '';
 
@@ -148,32 +150,24 @@ app.get('/api/skins/give', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-
-
 });
 
 app.get('/debug/', async (req, res, next) => {
-
   const name = req.query.name?.toLowerCase().trim() || '';
 
   try {
     await SkinsManager.setRandomSkin(name);
     res.sendStatus(200);
-
   } catch (err) {
     next(err);
   }
 });
 
-
-
 app.get('/api/7tv/paint', async (req, res, next) => {
-
   const name = req.query.name?.toLowerCase().trim() || '';
 
   try {
     res.send(await getUserPaintsAndBadge(name));
-
   } catch (err) {
     next(err);
   }
@@ -226,8 +220,6 @@ app.get('/api/cones/duel', async (req, res, next) => {
 // -----------------------------------------------------------------------------
 // CHAT COMMAND FUNCTIONS (formerly API endpoints)
 // -----------------------------------------------------------------------------
-
-
 function commandLeaderboard(target) {
   io.emit('showLb',target);
 }
@@ -236,7 +228,6 @@ async function commandLbAverage() {
   const data = await LeaderboardManager.calculateLbStats();
   return `${data.totalGamesPlayed} cones have been redeemed by ${data.playerCount} players with an average winrate of ${data.averageWinRate}%!`;
 }
-
 
 async function commandConeflip(name) {
   const data = await LeaderboardManager.getPlayer(name);
@@ -248,18 +239,15 @@ async function commandConeflip(name) {
 }
 
 async function commandSkinsInventory(name) {
- 
   const stmt = SkinsManager.db.prepare('SELECT * FROM user_skins WHERE name = ?');
   const user = stmt.get(name);
   if (!user) return `${name} doesn't have any skins.`;
-
 
   let skins = user.inventory.split(',').map(skin => skin.trim()).filter(skin => skin);
 
   if ((await isSub(name)) > 0 && !skins.includes('subcone')) {
     skins.push('subcone');
   }
-
 
   const leaderboard = await LeaderboardManager.getLeaderboard();
   if (leaderboard[0]?.name === name && !skins.includes('gold')) {
@@ -280,7 +268,6 @@ async function commandSkinsSet(name, skin, random) {
 async function commandSkinsSwap(name, skin) {
   skin = skin.trim();
 
-
   const stmt = SkinsManager.db.prepare('SELECT inventory, skin FROM user_skins WHERE name = ?');
   const user = stmt.get(name);
   if (!user) return `${name} doesn't have any skins.`;
@@ -289,22 +276,18 @@ async function commandSkinsSwap(name, skin) {
     ? user.inventory.split(',').map(s => s.trim()).filter(Boolean)
     : [];
 
-
   let checkInventory = [...inventory];
-
 
   if ((await isSub(name)) > 0 && !checkInventory.includes("subcone")) {
     checkInventory.push("subcone");
     console.log(`Dynamically added "subcone" for ${name}.`);
   }
 
-
   const leaderboard = await LeaderboardManager.getLeaderboard();
   if (leaderboard[0]?.name === name && !checkInventory.includes("gold")) {
     checkInventory.push("gold");
     console.log(`Dynamically added "gold" for ${name}.`);
   }
-
 
   if (checkInventory.includes(skin) || skin === 'default') {
     SkinsManager.db.prepare('UPDATE user_skins SET skin = ? WHERE name = ?').run(skin, name);
@@ -373,7 +356,6 @@ function startChatListener() {
           .catch(console.error);
       }
       else if (command === 'giveskin') {
-
         const admins = process.env.CONE_ADMIN ? process.env.CONE_ADMIN.split(',').map(a => a.trim().toLowerCase()) : [];
         if (admins.includes(tags.username.toLowerCase())) {
           if (args.length === 0) {
@@ -386,11 +368,8 @@ function startChatListener() {
               .catch(console.error);
           }
         }
-
       }
-
       else if (command === 'simcone') {
-
         const admins = process.env.CONE_ADMIN ? process.env.CONE_ADMIN.split(',').map(a => a.trim().toLowerCase()) : [];
         if (admins.includes(tags.username.toLowerCase())) {
           if (args.length === 0) {
@@ -400,11 +379,8 @@ function startChatListener() {
             io.emit('addCone', name);
           }
         }
-
       }
-
       else if (command === 'simduel') {
-
         const admins = process.env.CONE_ADMIN ? process.env.CONE_ADMIN.split(',').map(a => a.trim().toLowerCase()) : [];
         if (admins.includes(tags.username.toLowerCase())) {
           if (args.length === 0) {
@@ -415,7 +391,6 @@ function startChatListener() {
             io.emit("addConeDuel", name, target);
           }
         }
-
       }
       else if (command === 'setskin') {
         if (args.length === 0) {
@@ -431,11 +406,9 @@ function startChatListener() {
         const response = commandSkinsOdds();
         sendChatMessage(channel, `${response}. You can view them here: https://drippycatcs.github.io/coneflip-overlay/commands#-cone-skins .`);
       }
-
       else if (command === 'conehelp') {
         sendChatMessage(channel, `@${tags.username}, Available commands: coneflip, conestats, leaderboard, myskins, setskin, coneskins view them all here: https://drippycatcs.github.io/coneflip-overlay/commands .`);
       }
-
       else if (command === 'refreshcones') {
         const admins = process.env.CONE_ADMIN ? process.env.CONE_ADMIN.split(',').map(a => a.trim().toLowerCase()) : [];
         if (admins.includes(tags.username.toLowerCase())) {
@@ -443,7 +416,6 @@ function startChatListener() {
           sendChatMessage(channel, `@${tags.username}, cones have been refreshed.`);
         }
       }
-
       else if (command === 'conestuck') {
         const admins = process.env.CONE_ADMIN ? process.env.CONE_ADMIN.split(',').map(a => a.trim().toLowerCase()) : [];
         if (admins.includes(tags.username.toLowerCase())) {
@@ -454,7 +426,6 @@ function startChatListener() {
           sendChatMessage(channel, `@${tags.username}, CONSUME spamming cones to unlock other cones.`);
         }
       }
-
     }
   });
 }
@@ -579,8 +550,6 @@ class LeaderboardManager {
   }
 }
 
-
-
 /**
  * Checks the subscription status for a given username and returns the subscription tier.
  * Returns:
@@ -593,7 +562,6 @@ class LeaderboardManager {
  */
 async function isSub(username) {
   try {
-
     const userId = await getTwitchId(username);
     const channelId = await getTwitchId(CONFIG.TWITCH.CHANNEL_NAME);
 
@@ -601,7 +569,6 @@ async function isSub(username) {
       console.error("Failed to retrieve valid user or channel ID.");
       return false;
     }
-
 
     const response = await axios.get(`https://api.twitch.tv/helix/subscriptions`, {
       headers: {
@@ -614,7 +581,6 @@ async function isSub(username) {
         user_id: userId,
       },
     });
-
 
     if (response.data.data && response.data.data.length > 0) {
       const sub = response.data.data[0];
@@ -637,10 +603,6 @@ async function isSub(username) {
     return 0;
   }
 }
-
-
-
-
 
 class SkinsManager {
   static availableSkins = {};
@@ -752,13 +714,9 @@ class SkinsManager {
   }
 }
 
-
-
 // -----------------------------------------------------------------------------
 // 7TV Integration
 // -----------------------------------------------------------------------------
-
-
 async function getUserPaintsAndBadge(twitchUsername) {
   try {
     // Fetch user ID by Twitch username
@@ -887,7 +845,6 @@ async function getUserPaintsAndBadge(twitchUsername) {
         paintDetails.image = paint.image_url;
       }
       
-  
       if (paint.shadows && paint.shadows.length) {
         paintDetails.shadows = paint.shadows.map(shadow => ({
           x_offset: shadow.x_offset,
@@ -900,151 +857,149 @@ async function getUserPaintsAndBadge(twitchUsername) {
       }
     }
 
-
     return paintDetails;
-
   } catch (error) {
     console.error('Error in getUserPaintsAndBadge:', error.message);
     throw error;
   }
 }
 
-
-
-
 // -----------------------------------------------------------------------------
-// SOCKET.IO CONNECTION HANDLER
+// EVENT SUB IMPLEMENTATION (Replacing PubSub)
 // -----------------------------------------------------------------------------
-io.on('connection', async (socket) => {
-
-  
-  let topPlayer = null;
+async function startEventSubListener() {
   try {
-    const data = await LeaderboardManager.getLeaderboard();
-    topPlayer = data[0]?.name || null;
-    socket.emit('refreshLb', data);
-    socket.emit('goldSkin', topPlayer);
-    const updateStateHandler = async (name, isWin) => {
-      try {
-        const result = await LeaderboardManager.updatePlayer(name, isWin);
-        const newTopPlayer = result[0]?.name;
-        if (newTopPlayer !== topPlayer) {
-          topPlayer = newTopPlayer;
-          socket.emit('goldSkin', topPlayer);
-          socket.emit('newGoldCelebration', topPlayer);
-        }
-        io.emit('refreshLb', result);
-      } catch (err) {
-        console.error(`Error updating player state: ${err.message}`);
-      }
-    };
-    socket.on('win', (name) => updateStateHandler(name, true));
-    socket.on('fail', (name) => updateStateHandler(name, false));
-    socket.on('unboxfinished' , (message) =>  sendChatMessage(CONFIG.TWITCH.CHANNEL, message));
-  } catch (err) {
-    console.error('Socket connection error:', err);
-  }
-});
-
-// -----------------------------------------------------------------------------
-// TWITCH PUBSUB REWARD LOGGER
-// -----------------------------------------------------------------------------
-function startPubSubListener() {
-  const BROADCASTER_ID = '782127507';
-  const ACCESS_TOKEN = CONFIG.TWITCH.STREAMER_ACCESS_TOKEN;
-  const PUBSUB_URL = 'wss://pubsub-edge.twitch.tv';
-  const CHANNEL_POINTS_TOPIC = `channel-points-channel-v1.${BROADCASTER_ID}`;
-  const PING_INTERVAL_MS = 4 * 60 * 1000; // 4 minutes
-
-  const ws = new WebSocket(PUBSUB_URL);
-
-  ws.on('open', () => {
-    console.log('[PubSub] Connected to Twitch PubSub.');
-    const listenMessage = {
-      type: 'LISTEN',
-      data: {
-        topics: [CHANNEL_POINTS_TOPIC],
-        auth_token: ACCESS_TOKEN,
-      },
-    };
-    ws.send(JSON.stringify(listenMessage));
-    setInterval(() => {
-      console.log('[PubSub] Sending PING to keep connection alive...');
-      ws.send(JSON.stringify({ type: 'PING' }));
-    }, PING_INTERVAL_MS);
-  });
-
-  ws.on('message', (rawMessage) => {
+    console.log('[EventSub] Initializing EventSub listener...');
+    
+    // Create auth provider with your client ID and access token
+    const authProvider = new StaticAuthProvider(
+      CONFIG.TWITCH.CLIENT_ID, 
+      CONFIG.TWITCH.STREAMER_ACCESS_TOKEN
+    );
+    
+    // Create API client
+    const apiClient = new ApiClient({ authProvider });
+    
+    // Get the broadcaster ID (needed for event subscriptions)
+    let broadcasterId;
     try {
-      const msg = JSON.parse(rawMessage);
-      switch (msg.type) {
-        case 'RESPONSE':
-          if (msg.error) {
-            console.error('[PubSub] Subscription failed:', msg.error);
-          } else {
-            console.log('[PubSub] Successfully subscribed to topic.');
-          }
-          break;
-        case 'MESSAGE':
-          handlePubSubMessage(msg.data);
-          break;
-        case 'PONG':
-          console.log('[PubSub] Received PONG.');
-          break;
-        case 'RECONNECT':
-          console.warn('[PubSub] Received RECONNECT message from Twitch.');
-          ws.close();
-          startPubSubListener();
-          break;
-        default:
-          console.log('[PubSub] Unhandled message type:', msg.type, msg);
-          break;
+      const user = await apiClient.users.getUserByName(CONFIG.TWITCH.CHANNEL);
+      if (!user) {
+        throw new Error(`Channel ${CONFIG.TWITCH.CHANNEL} not found`);
       }
-    } catch (err) {
-      console.error('[PubSub] Error parsing message:', err);
+      broadcasterId = user.id;
+      console.log(`[EventSub] Broadcaster ID for ${CONFIG.TWITCH.CHANNEL}: ${broadcasterId}`);
+    } catch (error) {
+      console.error('[EventSub] Failed to get broadcaster ID:', error);
+      return;
     }
-  });
-
-  ws.on('close', (code, reason) => {
-    console.warn(`[PubSub] Connection closed. Code: ${code}, Reason: ${reason}`);
-    setTimeout(() => {
-      startPubSubListener();
-    }, 5000);
-  });
-
-  ws.on('error', (error) => {
-    console.error('[PubSub] Error:', error);
-  });
-}
-
-function handlePubSubMessage(data) {
-  const { topic, message } = data;
-  try {
-    const parsedMessage = JSON.parse(message);
-    if (parsedMessage.type === 'reward-redeemed') {
-      const redemption = parsedMessage.data?.redemption;
-      if (!redemption) {
-        console.error('[PubSub] No redemption data found.');
-        return;
+    
+    // Create EventSub listener with proper event handlers
+    const listener = new EventSubWsListener({
+      apiClient,
+      logger: {
+        minLevel: 'info', // You can change this to 'info' in production
+        name: 'eventsub'
       }
-      const rewardId = redemption.reward.id;
-      if (rewardId === CONFIG.TWITCH.DUEL_REWARD) {
-        handleDuelReward(redemption);
-      } else if (rewardId === CONFIG.TWITCH.CONE_REWARD) {
-        handleConeReward(redemption);
-      } else if (rewardId === CONFIG.TWITCH.UNBOX_CONE) {
-        handleUnboxConeReward(redemption);
-      } else if (rewardId === CONFIG.TWITCH.BUY_CONE) {
-        handleBuyConeReward(redemption);
+    });
+    
+    // Add event handlers using the .on() method (proper approach)
+    listener.on('websocket-error', (error) => {
+      console.error('[EventSub] WebSocket error:', error);
+    });
+    
+    listener.on('websocket-reconnect', () => {
+      console.log('[EventSub] WebSocket reconnected');
+    });
+    
+    listener.on('error', (error) => {
+      console.error('[EventSub] General error:', error);
+    });
+    
+    // Start the listener
+    await listener.start();
+    console.log('[EventSub] Listener started');
+    
+    try {
+      // Subscribe to channel point redemptions
+      try {
+        await listener.onChannelRedemptionAdd(broadcasterId, (event) => {
+          handleEventSubRedemption(event);
+        });
+        console.log('[EventSub] Successfully subscribed to channel point redemptions using onChannelRedemptionAdd');
+      } catch (e) {
+        try {
+          await listener.subscribeToChannelRewardRedemptionAddEvents(broadcasterId, null, (event) => {
+            handleEventSubRedemption(event);
+          });
+          console.log('[EventSub] Successfully subscribed to channel point redemptions using subscribeToChannelRewardRedemptionAddEvents');
+        } catch (e2) {
+          await listener.subscribeToChannelRedemptionAddEvents(broadcasterId, (event) => {
+            handleEventSubRedemption(event);
+          });
+          console.log('[EventSub] Successfully subscribed to channel point redemptions using subscribeToChannelRedemptionAddEvents');
+        }
+      }
+    } catch (error) {
+      // Check if the error is because we've already subscribed
+      if (error.message?.includes('Too Many Requests') || error.message?.includes('maximum subscriptions')) {
+        console.log('[EventSub] Already subscribed to channel point redemptions, continuing...');
+        
+        // Even if we can't create a new subscription, we should still receive events
+        // for existing subscriptions with the same credentials
       } else {
-        console.log('[PubSub] Unrecognized reward id:', rewardId);
+        console.error('[EventSub] Failed to subscribe to channel redemptions:', error);
       }
     }
-  } catch (err) {
-    console.error('[PubSub] Error parsing redemption message:', err);
+    
+    return listener;
+  } catch (error) {
+    console.error('[EventSub] Error setting up EventSub:', error);
+    // Try to reconnect after a delay
+    setTimeout(() => {
+      startEventSubListener();
+    }, 10000);
   }
 }
 
+function handleEventSubRedemption(event) {
+  try {
+    console.log(`[EventSub] Reward redeemed: ${event.rewardTitle} by ${event.userDisplayName}`);
+    
+    // Format the redemption in the structure expected by our handlers
+    const redemption = {
+      reward: {
+        id: event.rewardId,
+        title: event.rewardTitle
+      },
+      user: {
+        id: event.userId,
+        login: event.userName.toLowerCase(),
+        display_name: event.userDisplayName
+      },
+      user_input: event.input || ''
+    };
+    
+    // Map the reward ID to the appropriate handler
+    if (event.rewardId === CONFIG.TWITCH.DUEL_REWARD) {
+      handleDuelReward(redemption);
+    } else if (event.rewardId === CONFIG.TWITCH.CONE_REWARD) {
+      handleConeReward(redemption);
+    } else if (event.rewardId === CONFIG.TWITCH.UNBOX_CONE) {
+      handleUnboxConeReward(redemption);
+    } else if (event.rewardId === CONFIG.TWITCH.BUY_CONE) {
+      handleBuyConeReward(redemption);
+    } else {
+      console.log('[EventSub] Unrecognized reward id:', event.rewardId);
+    }
+  } catch (error) {
+    console.error('[EventSub] Error handling redemption event:', error);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// REWARD HANDLERS (Unchanged, used by both PubSub and EventSub)
+// -----------------------------------------------------------------------------
 async function handleDuelReward(redemption) {
   const { user, user_input } = redemption;
   console.log(`[Reward: Duel] ${user.login} redeemed duel reward with input: "${user_input}"`);
@@ -1116,7 +1071,6 @@ async function handleUnboxConeReward(redemption) {
     console.log(`[Reward: Unbox Cone] ${user.display_name} redeemed unbox cone and got: "${result}"`);
     io.emit('unboxConeReward', { name, result });
     io.emit('skinRefresh');
- 
   } catch (error) {
     console.error('Error handling unbox cone reward:', error);
     sendChatMessage(CONFIG.TWITCH.CHANNEL, `${user.display_name}, an error occurred during unbox cone reward.`);
@@ -1146,6 +1100,38 @@ async function handleBuyConeReward(redemption) {
 }
 
 // -----------------------------------------------------------------------------
+// SOCKET.IO CONNECTION HANDLER
+// -----------------------------------------------------------------------------
+io.on('connection', async (socket) => {
+  let topPlayer = null;
+  try {
+    const data = await LeaderboardManager.getLeaderboard();
+    topPlayer = data[0]?.name || null;
+    socket.emit('refreshLb', data);
+    socket.emit('goldSkin', topPlayer);
+    const updateStateHandler = async (name, isWin) => {
+      try {
+        const result = await LeaderboardManager.updatePlayer(name, isWin);
+        const newTopPlayer = result[0]?.name;
+        if (newTopPlayer !== topPlayer) {
+          topPlayer = newTopPlayer;
+          socket.emit('goldSkin', topPlayer);
+          socket.emit('newGoldCelebration', topPlayer);
+        }
+        io.emit('refreshLb', result);
+      } catch (err) {
+        console.error(`Error updating player state: ${err.message}`);
+      }
+    };
+    socket.on('win', (name) => updateStateHandler(name, true));
+    socket.on('fail', (name) => updateStateHandler(name, false));
+    socket.on('unboxfinished' , (message) =>  sendChatMessage(CONFIG.TWITCH.CHANNEL, message));
+  } catch (err) {
+    console.error('Socket connection error:', err);
+  }
+});
+
+// -----------------------------------------------------------------------------
 // Emit a restart event to connected clients after a short delay
 // -----------------------------------------------------------------------------
 (async () => {
@@ -1170,7 +1156,8 @@ async function startServer() {
     server.listen(CONFIG.PORT, () => {
       console.log(`Server is running on port ${CONFIG.PORT}`);
     });
-    startPubSubListener();
+    // Start EventSub listener instead of PubSub
+    await startEventSubListener();
     startChatListener();
   } catch (err) {
     console.error('Failed to start server:', err);
@@ -1179,7 +1166,6 @@ async function startServer() {
 }
 
 startServer();
-
 
 // -----------------------------------------------------------------------------
 // GRACEFUL SHUTDOWN: Close SQLite connections on exit/crash to prevent locks

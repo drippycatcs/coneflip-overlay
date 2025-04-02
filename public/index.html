@@ -6,7 +6,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
   
-  <script src="https://unpkg.com/@lottiefiles/lottie-player@latest"></script>
+
 
   <meta charset="viewport" content="width=device-width, initial-scale=1.0">
   <title>ConeFlip</title>
@@ -224,15 +224,6 @@
 
   <div id="winner-container" class="hidden">
     <div id="winner-player-details">
-      <lottie-player
-        id="lottie-trophy"
-        src="trophy.json"
-        background="transparent"
-        speed="1"
-        style="width: 200px; height: 200px; position: absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:-1;"
-        loop
-        autoplay
-      ></lottie-player>
       <h1 id="winner-player-name"></h1>
     </div>
   </div>
@@ -799,9 +790,6 @@
             applyPaintToName(winnerSpan, winnerName);
           }
           container.classList.remove('hidden');
-          const trophyAnimation = document.getElementById("lottie-trophy");
-          trophyAnimation.stop();
-          setTimeout(() => { trophyAnimation.play(); }, 500);
 
           setTimeout(() => {
             container.classList.add('fadeoutgold');
