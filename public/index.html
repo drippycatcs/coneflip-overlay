@@ -109,6 +109,7 @@
       text-align: center;
       z-index: 10;
       animation: fade-in 1s ease-in-out forwards;
+     
     }
 
     #winner-container.hidden {
@@ -127,6 +128,12 @@
       color: #fff;
       font-family: "Space Grotesk", serif;
       margin: 0;
+      
+
+    }
+
+    .no7TV{
+      text-shadow: #474747 3px 5px 2px;
     }
 
     @keyframes fade-in {
@@ -317,7 +324,7 @@
         let textSpan = wrapper.querySelector('.paint-text');
         let shadowSpan = wrapper.querySelector('.paint-shadow');
 
-   
+        textSpan.classList.remove('no7TV');
         nameElement.style.display = "inline-block";
         nameElement.style.opacity = "0";
         nameElement.style.transition = "opacity 0.5s ease";
@@ -336,6 +343,7 @@
           .then(paintData => {
             if (paintData && paintData.function) {
               const cssValue = getPaintCSS(paintData);
+         
               if (cssValue) {
                 if (typeof CSS !== "undefined" && CSS.supports && CSS.supports("-webkit-background-clip", "text")) {
 
@@ -344,16 +352,21 @@
                   textSpan.style.backgroundClip = "text";
                   textSpan.style.webkitTextFillColor = "transparent";
                   textSpan.style.color = "transparent";
+                  textSpan.style.setProperty("color-shadow", "transparent", "important");
                   if (paintData.function === "URL") {
                     textSpan.style.backgroundSize = "cover";
                   }
        
                   if (paintData.shadows && Array.isArray(paintData.shadows) && paintData.shadows.length > 0) {
                     const multiplier = nameElement.classList.contains('winner-name') ? 2 : 1;
-                    const textShadowValue = paintData.shadows
-                      .map(shadow => `${shadow.x_offset * multiplier}px ${shadow.y_offset * multiplier}px ${shadow.radius * multiplier}px ${convertColor(shadow.color)}`)
-                      .join(', ');
-                    shadowSpan.style.textShadow = textShadowValue;
+                    const filterValue = paintData.shadows
+                 .map(shadow =>
+                 `drop-shadow(${convertColor(shadow.color)} ${shadow.x_offset * multiplier}px ${shadow.y_offset * multiplier}px ${shadow.radius * multiplier}px)`
+                 )
+                 .join(' ');
+                 console.log(filterValue);
+                    shadowSpan.style.setProperty("filter", filterValue, "important");
+                    shadowSpan.style.setProperty("text-shadow", "none", "important");
                     shadowSpan.style.display = "inline";
                   } else {
                     shadowSpan.style.display = "none";
@@ -371,8 +384,11 @@
               textSpan.style.color = "white";
               textSpan.style.backgroundSize = "";
               textSpan.style.webkitTextStroke = "";
-              shadowSpan.style.textShadow = "";
+              textSpan.classList.add('no7TV');
               shadowSpan.style.display = "none";
+      
+              console.log("No paint data found for " + playerName);
+              
             }
       
             setTimeout(() => {
@@ -380,7 +396,7 @@
             }, 10);
           })
           .catch(error => {
-            console.error(`Error fetching paint for ${playerName}:`, error);
+            console.log(`Error fetching paint for ${playerName}:`, error);
             setTimeout(() => {
               nameElement.style.opacity = "1";
             }, 10);
@@ -783,7 +799,7 @@
           
           const container = document.getElementById('winner-container');
           const playerNameElem = document.getElementById('winner-player-name');
-          playerNameElem.innerHTML = "Winner: <br><span class='winner-name'>" + winnerName + "</span>";
+          playerNameElem.innerHTML = "<span class='no7TV'>Winner:</span> <br><span class='winner-name'>" + winnerName + "</span>";
           // Apply the 7TV paint to that span
           let winnerSpan = playerNameElem.querySelector('.winner-name');
           if (winnerSpan) {

@@ -280,10 +280,13 @@
                 }
           
                 if (paintData.shadows && Array.isArray(paintData.shadows) && paintData.shadows.length > 0) {
-                  const textShadowValue = paintData.shadows
-                    .map(shadow => `${shadow.x_offset}px ${shadow.y_offset}px ${shadow.radius}px ${convertColor(shadow.color)}`)
-                    .join(', ');
-                  nameShadowSpan.style.textShadow = textShadowValue;
+                  const filterValue = paintData.shadows
+                 .map(shadow =>
+                 `drop-shadow(${convertColor(shadow.color)} ${shadow.x_offset * 1}px ${shadow.y_offset * 1}px ${shadow.radius * 1}px)`
+                 )
+                 .join(' ');
+                 nameShadowSpan.style.setProperty("filter", filterValue, "important");
+                 nameShadowSpan.style.setProperty("text-shadow", "none", "important");
                   nameShadowSpan.style.display = "inline";
                 } else {
                   nameShadowSpan.style.display = "none";
