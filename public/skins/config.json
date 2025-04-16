@@ -70,6 +70,12 @@
         "unboxWeight": 15
     },
     {
+        "name": "rtxcone",
+        "visuals": "cone_rtx.png",
+        "canUnbox": true,
+        "unboxWeight": 15
+    },
+    {
         "name": "fade",
         "visuals": "cone_fade.png",
         "canUnbox": true,

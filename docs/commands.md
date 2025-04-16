@@ -43,6 +43,7 @@ Below is a list of all available **Cone Skins** in the game.
 | Case Hardened   | ![Case Hardened](public/skins/cone_casehardened.png)| **Common** (30%)                          |
 | Tiger Tooth     | ![Tiger Tooth](public/skins/cone_tigertooth.png)  | **Uncommon** (15%)                          |
 | Ahegao          | ![Ahegao](public/skins/cone_ahegao.png)         | **Uncommon** (15%)                          |
+| Rtx Cone          | ![Ahegao](public/skins/cone_rtx.png)         | **Uncommon** (15%)                          |
 | Fade            | ![Fade](public/skins/cone_fade.png)             | **Uncommon** (15%)                          |
 | Printstream     | ![Printstream](public/skins/cone_printstream.png)| **Uncommon** (15%)                          |
 | Rainbow         | ![Rainbow](public/skins/cone_rainbow.webp)       | **Rare** (9%)                               |
