@@ -44,6 +44,11 @@
       transition: opacity 0.5s ease;
     }
     
+    .userName.has-emote {
+      background-color: transparent;
+      padding: 0;
+    }
+
     /* New CSS for winner name text so the painted gradient shows through */
     .winner-name {
       display: inline-block;
@@ -214,6 +219,25 @@
       to {
         opacity: 0;
       }
+    }
+
+    .emote-inline {
+      display: inline-block;
+      vertical-align: middle;
+      width: 80px;
+      height: 80px;
+      margin: 0px 2px;
+      transform: translateY(-40px);
+      object-fit: contain;
+    }
+
+    .emote-inline-winner {
+      display: inline-block;
+      vertical-align: middle;
+      width: 200px;
+      height: 200px;
+      margin: 0 2px;
+      object-fit: contain;
     }
   </style>
 </head>
@@ -633,7 +657,8 @@
           this.gameManager = gameManager;
           this.cones = [];
           this.coneQueue = [];
-          this.coneQueueDuel = [];
+          this.duelQueue = []; // Queue for all duels
+          this.isProcessingDuel = false; // Flag to track if we're currently processing a duel
           this.positions = [
             { x: (2 * window.innerWidth) / 5, occupied: false },
             { x: (3 * window.innerWidth) / 5, occupied: false },
@@ -691,26 +716,77 @@
         }
 
         addConeDuel(p1, p2) {
-          if (this.duel && !this.duel.isFinished) {
-            setTimeout(() => {
-              this.addConeDuel(p1, p2);
-            }, 1000);
-            return;
+          // Add duel to queue
+          this.duelQueue.push({ player1: p1, player2: p2 });
+          console.log(`[ConeManager] Duel queued: ${p1} vs ${p2}. Queue length: ${this.duelQueue.length}`);
+          
+          // Only start processing if we're not already processing a duel
+          if (!this.isProcessingDuel && (!this.duel || this.duel.isFinished)) {
+            this.processNextDuel();
           }
-          this.duel = {
-            player1: p1,
-            player2: p2,
-            p1Result: null,
-            p2Result: null,
-            isFinished: false,
-          };
+        }
 
-          setTimeout(() => {
-            this.coneQueueDuel = this.coneQueueDuel.filter(item => item !== p1);
-            //showMortalKombatNotification(p1, p2);
-            this.addDuelCone(p1, 0.35);
-            this.addDuelCone(p2, 0.65);
-          }, 2000);
+        processNextDuel() {
+          if (this.duelQueue.length === 0 || this.isProcessingDuel) return;
+          
+          this.isProcessingDuel = true;
+          const nextDuel = this.duelQueue.shift();
+          console.log(`[ConeManager] Processing next duel: ${nextDuel.player1} vs ${nextDuel.player2}`);
+
+          // Check both players for emotes
+          Promise.all([
+            fetch(`/api/7tv/emote?name=${encodeURIComponent(nextDuel.player1)}`).then(response => response.json()),
+            fetch(`/api/7tv/emote?name=${encodeURIComponent(nextDuel.player2)}`).then(response => response.json())
+          ]).then(([p1Data, p2Data]) => {
+            if (this.duel && !this.duel.isFinished) {
+              console.log('[ConeManager] Another duel is still active, requeuing this duel');
+              this.duelQueue.unshift(nextDuel);
+              this.isProcessingDuel = false;
+              return;
+            }
+
+            this.duel = {
+              player1: nextDuel.player1,
+              player2: nextDuel.player2,
+              p1Result: null,
+              p2Result: null,
+              isFinished: false,
+              p1IsEmote: p1Data.isEmote && p1Data.url ? true : false,
+              p2IsEmote: p2Data.isEmote && p2Data.url ? true : false,
+              p1EmoteUrl: p1Data.isEmote ? p1Data.url : null,
+              p2EmoteUrl: p2Data.isEmote ? p2Data.url : null
+            };
+
+            setTimeout(() => {
+              this.addDuelCone(nextDuel.player1, 0.35);
+              this.addDuelCone(nextDuel.player2, 0.65);
+            }, 2000);
+          }).catch(error => {
+            console.error('Error checking emotes:', error);
+            if (this.duel && !this.duel.isFinished) {
+              console.log('[ConeManager] Another duel is still active, requeuing this duel');
+              this.duelQueue.unshift(nextDuel);
+              this.isProcessingDuel = false;
+              return;
+            }
+
+            this.duel = {
+              player1: nextDuel.player1,
+              player2: nextDuel.player2,
+              p1Result: null,
+              p2Result: null,
+              isFinished: false,
+              p1IsEmote: false,
+              p2IsEmote: false,
+              p1EmoteUrl: null,
+              p2EmoteUrl: null
+            };
+
+            setTimeout(() => {
+              this.addDuelCone(nextDuel.player1, 0.35);
+              this.addDuelCone(nextDuel.player2, 0.65);
+            }, 2000);
+          });
         }
 
         addDuelCone(name, ratio) {
@@ -726,7 +802,9 @@
             this.gameManager.world,
             this,
             this.gameManager,
-            true
+            true,
+            this.duel && name === this.duel.player1 ? this.duel.p1EmoteUrl : 
+            this.duel && name === this.duel.player2 ? this.duel.p2EmoteUrl : null
           );
           this.cones.push(cone);
 
@@ -794,18 +872,50 @@
           this.duelCones = [];
           this.duelFailedCones = 0;
           this.duel = null;
+          this.isProcessingDuel = false;
+
+          // Process next duel in queue after a short delay
+          setTimeout(() => {
+            this.processNextDuel();
+          }, 1000);
 
           triggerConfetti({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
           
           const container = document.getElementById('winner-container');
           const playerNameElem = document.getElementById('winner-player-name');
-          playerNameElem.innerHTML = "<span class='no7TV'>Winner:</span> <br><span class='winner-name'>" + winnerName + "</span>";
-          // Apply the 7TV paint to that span
-          let winnerSpan = playerNameElem.querySelector('.winner-name');
-          if (winnerSpan) {
-            applyPaintToName(winnerSpan, winnerName);
-          }
-          container.classList.remove('hidden');
+          
+          // Check if the winner is an emote
+          fetch(`/api/7tv/emote?name=${encodeURIComponent(winnerName)}`)
+            .then(response => response.json())
+            .then(data => {
+              if (data.isEmote && data.url) {
+                // If winner is an emote, show the emote image
+                playerNameElem.innerHTML = "<span class='no7TV'>Winner:</span> <br><span class='winner-name'>";
+                const emoteImg = document.createElement('img');
+                emoteImg.src = data.url;
+                emoteImg.className = 'emote-inline-winner';
+                playerNameElem.querySelector('.winner-name').appendChild(emoteImg);
+                playerNameElem.querySelector('.winner-name').appendChild(document.createElement('br'));
+              } else {
+                // If not an emote, show normal text with paint
+                playerNameElem.innerHTML = "<span class='no7TV'>Winner:</span> <br><span class='winner-name'>" + winnerName + "</span>";
+                let winnerSpan = playerNameElem.querySelector('.winner-name');
+                if (winnerSpan) {
+                  applyPaintToName(winnerSpan, winnerName);
+                }
+              }
+              container.classList.remove('hidden');
+            })
+            .catch(error => {
+              console.error('Error checking emote:', error);
+              // If there's an error, show normal text with paint
+              playerNameElem.innerHTML = "<span class='no7TV'>Winner:</span> <br><span class='winner-name'>" + winnerName + "</span>";
+              let winnerSpan = playerNameElem.querySelector('.winner-name');
+              if (winnerSpan) {
+                applyPaintToName(winnerSpan, winnerName);
+              }
+              container.classList.remove('hidden');
+            });
 
           setTimeout(() => {
             container.classList.add('fadeoutgold');
@@ -939,7 +1049,8 @@
           world,
           coneManager,
           gameManager,
-          isDuelCone = false
+          isDuelCone = false,
+          emoteUrl = null
         ) {
           this.name = name;
           this.engine = engine;
@@ -948,6 +1059,7 @@
           this.gameManager = gameManager;
           this.isDuelCone = isDuelCone;
           this.isRemoved = false;
+          this.emoteUrl = emoteUrl;
 
           this.hasLaunched = false;
           this.celebrated = false;
@@ -970,6 +1082,9 @@
 
           this.nameWrapper = document.createElement('span');
           this.nameWrapper.className = 'userName';
+          if (this.emoteUrl) {
+            this.nameWrapper.classList.add('has-emote');
+          }
           document.body.appendChild(this.nameWrapper);
 
           this.nameWrapper.style.opacity = "0";
@@ -978,11 +1093,17 @@
           }, 300);
 
           this.nameText = document.createElement('span');
-          this.nameText.textContent = name;
+          if (this.emoteUrl) {
+            const emoteImg = document.createElement('img');
+            emoteImg.src = this.emoteUrl;
+            emoteImg.className = 'emote-inline';
+            this.nameText.appendChild(emoteImg);
+          } else {
+            this.nameText.textContent = name;
+            // Apply the new layered paint+shadow logic.
+            applyPaintToName(this.nameText, name);
+          }
           this.nameWrapper.appendChild(this.nameText);
-
-          // Apply the new layered paint+shadow logic.
-          applyPaintToName(this.nameText, name);
 
           if (texture.includes('holo_')) {
             this.overlay = document.createElement('img');

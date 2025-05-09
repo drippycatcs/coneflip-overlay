@@ -70,6 +70,12 @@
         "unboxWeight": 15
     },
     {
+        "name": "rtxcone",
+        "visuals": "cone_rtx.png",
+        "canUnbox": true,
+        "unboxWeight": 15
+    },
+    {
         "name": "fade",
         "visuals": "cone_fade.png",
         "canUnbox": true,
@@ -95,13 +101,13 @@
     },
     {
         "name": "darkmatter",
-        "visuals": "holo_darkmatter.jpg",
+        "visuals": "holo_darkmatter.png",
         "canUnbox": true,
         "unboxWeight": 3
     },
     {
         "name": "iridescent",
-        "visuals": "holo_iridescent.jpg",
+        "visuals": "holo_iridescent.png",
         "canUnbox": true,
         "unboxWeight": 3
     }

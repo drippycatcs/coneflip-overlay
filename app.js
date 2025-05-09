@@ -217,6 +217,21 @@ app.get('/api/cones/duel', async (req, res, next) => {
   res.sendStatus(200);
 });
 
+app.get('/api/7tv/emote', async (req, res, next) => {
+  const name = req.query.name?.toLowerCase().trim() || '';
+
+  try {
+    const emoteMap = await getStreamerEmoteList();
+    const isEmote = name in emoteMap;
+    res.json({ 
+      isEmote,
+      url: isEmote ? emoteMap[name] : null
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // -----------------------------------------------------------------------------
 // CHAT COMMAND FUNCTIONS (formerly API endpoints)
 // -----------------------------------------------------------------------------
@@ -425,7 +440,10 @@ function startChatListener() {
           io.emit('addCone', "CONESTUCK");
           sendChatMessage(channel, `@${tags.username}, CONSUME spamming cones to unlock other cones.`);
         }
-      }
+        
+      }else if (command === '@drippycatcs') {
+        sendChatMessage(channel, `@${tags.username}, Hi drippycat debug agent here. Ask a mod to try !refreshcones if there are any issues. If this doesn't help please DM drippycat on discord. If Drippycat doesn't fix it within 15 minutes this script is developed to automatically bomb his appartment. Type !bombdrippycat to initiate the process.`);
+       }
     }
   });
 }
@@ -861,6 +879,98 @@ async function getUserPaintsAndBadge(twitchUsername) {
   } catch (error) {
     console.error('Error in getUserPaintsAndBadge:', error.message);
     throw error;
+  }
+}
+
+async function getStreamerEmoteList() {
+  try {
+    // Fetch streamer's 7TV user ID
+    const fetchUserQuery = `
+      query FetchUser($username: String!) {
+        users(query: $username) {
+          id
+          username
+        }
+      }
+    `;
+    const userResponse = await axios.post(
+      'https://7tv.io/v3/gql',
+      {
+        operationName: 'FetchUser',
+        query: fetchUserQuery,
+        variables: { username: CONFIG.TWITCH.CHANNEL }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${CONFIG.TWITCH.SEVENTV_TOKEN}`
+        }
+      }
+    );
+
+    if (userResponse.data.errors || !userResponse.data.data.users.length) {
+      console.error('Error fetching streamer or streamer not found:', userResponse.data.errors);
+      return [];
+    }
+    const userId = userResponse.data.data.users[0].id;
+
+    // Fetch streamer's emote list with URLs
+    const fetchEmotesQuery = `
+      query GetUserEmotes($id: ObjectID!) {
+        user(id: $id) {
+          emote_sets {
+            emotes {
+              id
+              name
+              data {
+                host {
+                  url
+                }
+                name
+              }
+            }
+          }
+        }
+      }
+    `;
+    const emotesResponse = await axios.post(
+      'https://7tv.io/v3/gql',
+      {
+        query: fetchEmotesQuery,
+        variables: { id: userId }
+      },
+      {
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+
+    if (emotesResponse.data.errors) {
+      console.error('GraphQL Errors:', emotesResponse.data.errors);
+      return [];
+    }
+
+    const userData = emotesResponse.data.data.user;
+    if (!userData || !userData.emote_sets) {
+      console.error('User data or emote sets not found.');
+      return [];
+    }
+
+    // Create a map of emote names to their URLs
+    const emoteMap = {};
+    userData.emote_sets.forEach(set => {
+      set.emotes.forEach(emote => {
+        if (emote.data && emote.data.host && emote.data.host.url) {
+          const name = emote.name.toLowerCase();
+          // Construct URL with emote ID and format
+          emoteMap[name] = `${emote.data.host.url}/4x.webp`;
+        }
+      });
+    });
+
+    return emoteMap;
+  } catch (error) {
+    console.error('Error fetching streamer emote list:', error);
+    return {};
   }
 }
 
