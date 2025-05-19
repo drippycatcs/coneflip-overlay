@@ -50,6 +50,8 @@ Below is a list of all available **Cone Skins** in the game.
 | Alarm           | ![Alarm](public/skins/cone_alarm.webp)          | **Rare** (9%)                               |
 | Dark Matter     | ![Dark Matter](public/skins/holo_darkmatter.jpg) | **Legendary** (3%)                          |
 | Iridescent      | ![Iridescent](public/skins/holo_iridescent.jpg)   | **Legendary** (3%)                          |
+| Doppler (Random)     | ![Doppler](public/skins/cone_dopplers.png) | **Legendary** (3%)                          |
+| Heat      | ![Heat](public/skins/cone_heat.png)   | **Legendary** (3%)                          |
 | Mongolia        | ![Mongolia](public/skins/cone_mongolia.webp)      | **Rare** (9%)                               |
 | Lavalamp        | ![Lavalamp](public/skins/cone_lavalamp.webp)      | **Rare** (9%)                               |
 

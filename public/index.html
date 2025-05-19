@@ -1105,7 +1105,19 @@
           }
           this.nameWrapper.appendChild(this.nameText);
 
-          if (texture.includes('holo_')) {
+          if (texture.includes('holo_doppler')) {
+ 
+            this.overlay = document.createElement('img');
+            this.overlay.src = 'skins/transparent.png';
+            this.overlay.className = 'cone';
+
+            this.element = document.createElement('div');
+            this.element.className = 'cone_holo'; 
+            const phase = Math.floor(Math.random() * 4) + 1;
+            this.element.style.backgroundImage = `url(${texture}_${phase}.jpg)`;
+            console.log(`[Cone] ${this.name} has holo_doppler with phase ${phase} url(${texture}_${phase}.jpg)`);
+            this.element.appendChild(this.overlay);
+          } else if (texture.includes('holo_')) {
             this.overlay = document.createElement('img');
             this.overlay.src = 'skins/transparent.png';
             this.overlay.className = 'cone';

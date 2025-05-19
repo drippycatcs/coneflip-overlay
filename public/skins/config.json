@@ -106,6 +106,18 @@
         "unboxWeight": 3
     },
     {
+        "name": "doppler",
+        "visuals": "holo_doppler",
+        "canUnbox": true,
+        "unboxWeight": 3
+    },
+    {
+        "name": "heat",
+        "visuals": "holo_heat.jpg",
+        "canUnbox": true,
+        "unboxWeight": 3
+    },
+    {
         "name": "iridescent",
         "visuals": "holo_iridescent.jpg",
         "canUnbox": true,
