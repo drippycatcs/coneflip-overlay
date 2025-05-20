@@ -276,10 +276,7 @@
   <audio id="winner" src="winner.mp3"></audio>
   <!-- Hidden SVG used as a template for the cone hitbox -->
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488.1 645.4" style="display: none;">
-    <path id="hitbox" d="M488,539.6v-12.7c0-4.2-1.8-8.2-4.9-10.9-2.6-2.2-5.9-3.4-9.2-3.4h-69.9L311.6,45.4
-       c-4.2-21.3-20.3-38.3-41.3-43.6-4.5-1.2-9.2-1.7-13.9-1.7h-24.8c-4.7,0-9.4.6-13.9,1.7c-21,5.4-37.1,22.3-41.3,43.6
-       l-92.3,467.2H14c-4.2,0-8.2,1.8-10.9,4.9c-2.2,2.6-3.4,5.9-3.4,9.2L0,573.2v57.8c0,4.2,1.8,8.2,4.9,10.9
-       c2.6,2.2,5.9,3.4,9.2,3.4h459.7c3.4,0,6.7-1.2,9.2-3.4c3.2-2.7,5-6.7,4.9-10.9v-91c0-0.2,0-0.3,0-0.5Z" />
+    <path id="hitbox" d="M185.67,0l-101.27,509.42H14.3c-4.2,0-8.2,1.79-10.9,4.87-2.2,2.58-3.4,5.86-3.4,9.14l.3,46.21v57.44c0,4.17,1.8,8.15,4.9,10.83,2.6,2.19,5.9,3.38,9.2,3.38h459.7c3.4,0,6.7-1.19,9.2-3.38,3.2-2.68,5-6.66,4.9-10.83v-90.93l.1.1v-12.62c0-4.17-1.8-8.15-4.9-10.83-2.6-2.19-5.9-3.38-9.2-3.38h-69.9L302.92,0" />
   </svg>
 
   <script>
@@ -1241,9 +1238,9 @@
 
           if (!this.celebrated && this.stillFrameCount > this.stillFrameThreshold) {
             this.celebrated = true;
-            const upright = this.isUpright();
-            console.log(`[Cone] ${this.name} isUpright: ${upright}, Angle: ${this.body.angle.toFixed(2)} radians`);
-            if (upright) {
+            const uprightOrUpsideDown = this.isUprightOrUpsideDown();
+            console.log(`[Cone] ${this.name} isUprightOrUpsideDown: ${uprightOrUpsideDown}, Angle: ${this.body.angle.toFixed(2)} radians`);
+            if (uprightOrUpsideDown) {
               document.getElementById('coolSound').play();
               triggerConfetti(this.body.position);
               if (this.isDuelCone) {
@@ -1280,11 +1277,12 @@
           this.stillFrameCount = 0;
         }
 
-        isUpright() {
+        isUprightOrUpsideDown() {
           let a = this.body.angle % (2 * Math.PI);
           if (a < 0) a += 2 * Math.PI;
           const eps = 0.2;
-          return (a < eps || a > 2 * Math.PI - eps);
+          // Check for upright (0) or upside down (π)
+          return (a < eps || a > 2 * Math.PI - eps || Math.abs(a - Math.PI) < eps);
         }
 
         checkOffScreen() {

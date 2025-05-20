@@ -882,6 +882,25 @@ async function getUserPaintsAndBadge(twitchUsername) {
   }
 }
 
+// Fetch 7TV global emotes
+async function getGlobal7TVEmotes() {
+  try {
+    const response = await axios.get('https://7tv.io/v3/emote-sets/global');
+    if (!response.data || !response.data.emotes) return {};
+    const emoteMap = {};
+    response.data.emotes.forEach(emote => {
+      if (emote.name && emote.data && emote.data.host && emote.data.host.url) {
+        emoteMap[emote.name.toLowerCase()] = `${emote.data.host.url}/4x.webp`;
+      }
+    });
+    return emoteMap;
+  } catch (err) {
+    console.error('Error fetching 7TV global emotes:', err);
+    return {};
+  }
+}
+
+// Update getStreamerEmoteList to merge global emotes
 async function getStreamerEmoteList() {
   try {
     // Fetch streamer's 7TV user ID
@@ -910,7 +929,7 @@ async function getStreamerEmoteList() {
 
     if (userResponse.data.errors || !userResponse.data.data.users.length) {
       console.error('Error fetching streamer or streamer not found:', userResponse.data.errors);
-      return [];
+      return {};
     }
     const userId = userResponse.data.data.users[0].id;
 
@@ -946,26 +965,30 @@ async function getStreamerEmoteList() {
 
     if (emotesResponse.data.errors) {
       console.error('GraphQL Errors:', emotesResponse.data.errors);
-      return [];
+      return {};
     }
 
     const userData = emotesResponse.data.data.user;
-    if (!userData || !userData.emote_sets) {
-      console.error('User data or emote sets not found.');
-      return [];
+    const emoteMap = {};
+    if (userData && userData.emote_sets) {
+      userData.emote_sets.forEach(set => {
+        set.emotes.forEach(emote => {
+          if (emote.data && emote.data.host && emote.data.host.url) {
+            const name = emote.name.toLowerCase();
+            emoteMap[name] = `${emote.data.host.url}/4x.webp`;
+          }
+        });
+      });
     }
 
-    // Create a map of emote names to their URLs
-    const emoteMap = {};
-    userData.emote_sets.forEach(set => {
-      set.emotes.forEach(emote => {
-        if (emote.data && emote.data.host && emote.data.host.url) {
-          const name = emote.name.toLowerCase();
-          // Construct URL with emote ID and format
-          emoteMap[name] = `${emote.data.host.url}/4x.webp`;
-        }
-      });
-    });
+    // Fetch and merge global emotes
+    const globalEmotes = await getGlobal7TVEmotes();
+    // Merge global emotes, but don't overwrite streamer emotes
+    for (const [name, url] of Object.entries(globalEmotes)) {
+      if (!(name in emoteMap)) {
+        emoteMap[name] = url;
+      }
+    }
 
     return emoteMap;
   } catch (error) {

@@ -166,6 +166,11 @@
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script>
+        socket.on('restart', () => {
+            location.reload(); // This reloads the page to restart the game
+    });
+
+    
     let paintCache = {};
     let userSkinsMap = {};
     let skinLibrary = {};

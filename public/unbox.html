@@ -164,6 +164,12 @@
       queueUnbox(skin, userName, message);
     });
 
+
+    socket.on('restart', () => {
+            location.reload(); // This reloads the page to restart the game
+    });
+
+
     // CS:GO-like rarity colors
     const rarityColors = {
       consumer: "#4A69FF",
