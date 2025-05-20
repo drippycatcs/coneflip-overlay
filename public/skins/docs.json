@@ -103,15 +103,27 @@
         "name": "darkmatter",
         "visuals": "holo_darkmatter.png",
         "canUnbox": true,
-        "unboxWeight": 3
+        "unboxWeight": 5
     },
     {
         "name": "iridescent",
         "visuals": "holo_iridescent.png",
         "canUnbox": true,
-        "unboxWeight": 3
+        "unboxWeight": 5
     }
     ,
+    {
+        "name": "doppler",
+        "visuals": "cone_holo2.png",
+        "canUnbox": true,
+        "unboxWeight": 5
+    },
+    {
+        "name": "heat",
+        "visuals": "cone_heat.png",
+        "canUnbox": true,
+        "unboxWeight": 5
+    },
     {
         "name": "mongolia",
         "visuals": "cone_mongolia.webp",

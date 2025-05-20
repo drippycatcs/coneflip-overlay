@@ -103,25 +103,25 @@
         "name": "darkmatter",
         "visuals": "holo_darkmatter.jpg",
         "canUnbox": true,
-        "unboxWeight": 3
+        "unboxWeight": 5
     },
     {
         "name": "doppler",
         "visuals": "holo_doppler",
         "canUnbox": true,
-        "unboxWeight": 3
+        "unboxWeight": 5
     },
     {
         "name": "heat",
         "visuals": "holo_heat.jpg",
         "canUnbox": true,
-        "unboxWeight": 3
+        "unboxWeight": 5
     },
     {
         "name": "iridescent",
         "visuals": "holo_iridescent.jpg",
         "canUnbox": true,
-        "unboxWeight": 3
+        "unboxWeight": 5
     }
     ,
     {
