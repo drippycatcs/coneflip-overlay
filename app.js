@@ -167,7 +167,11 @@ app.get('/api/7tv/paint', async (req, res, next) => {
   const name = req.query.name?.toLowerCase().trim() || '';
 
   try {
-    res.send(await getUserPaintsAndBadge(name));
+    const paintData = await getUserPaintsAndBadge(name);
+    if (paintData && paintData.username && paintData.username.toLowerCase() !== name) {
+      return res.send({ message: 'No active paint set.', username: paintData.username });
+    }
+    res.send(paintData);
   } catch (err) {
     next(err);
   }
@@ -874,6 +878,9 @@ async function getUserPaintsAndBadge(twitchUsername) {
         paintDetails.shadows = [];
       }
     }
+
+    
+    paintDetails.username = userData.username;
 
     return paintDetails;
   } catch (error) {
