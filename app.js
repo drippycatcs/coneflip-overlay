@@ -92,28 +92,28 @@ app.get('/api/leaderboard', async (req, res, next) => {
   const show = req.query.show === 'true';
 
   try {
-      if (show) {
-          io.emit('showLb');
-          return res.sendStatus(200);
-      }
+    if (show) {
+      io.emit('showLb');
+      return res.sendStatus(200);
+    }
 
-      if (name) {
-          let result;
-          const data = await LeaderboardManager.getPlayer(name);
-          if (data.hasPlayed) {
-              result = `${name} cone stats: ${data.rank} (Ws: ${data.wins} / Ls: ${data.fails} / WR%: ${data.winrate.toFixed(
-                  2
-              )})`;
-          } else {
-              result = `${name} never tried coneflipping.`;
-          }
-          return res.send(result);
+    if (name) {
+      let result;
+      const data = await LeaderboardManager.getPlayer(name);
+      if (data.hasPlayed) {
+        result = `${name} cone stats: ${data.rank} (Ws: ${data.wins} / Ls: ${data.fails} / WR%: ${data.winrate.toFixed(
+          2
+        )})`;
+      } else {
+        result = `${name} never tried coneflipping.`;
       }
+      return res.send(result);
+    }
 
-      const data = await LeaderboardManager.getLeaderboard();
-      res.json(data);
+    const data = await LeaderboardManager.getLeaderboard();
+    res.json(data);
   } catch (err) {
-      next(err);
+    next(err);
   }
 });
 app.get('/api/skins/users', async (req, res, next) => {
@@ -227,7 +227,7 @@ app.get('/api/7tv/emote', async (req, res, next) => {
   try {
     const emoteMap = await getStreamerEmoteList();
     const isEmote = name in emoteMap;
-    res.json({ 
+    res.json({
       isEmote,
       url: isEmote ? emoteMap[name] : null
     });
@@ -240,7 +240,7 @@ app.get('/api/7tv/emote', async (req, res, next) => {
 // CHAT COMMAND FUNCTIONS (formerly API endpoints)
 // -----------------------------------------------------------------------------
 function commandLeaderboard(target) {
-  io.emit('showLb',target);
+  io.emit('showLb', target);
 }
 
 async function commandLbAverage() {
@@ -291,7 +291,7 @@ async function commandSkinsSwap(name, skin) {
   const user = stmt.get(name);
   if (!user) return `${name} doesn't have any skins.`;
 
-  let inventory = user.inventory 
+  let inventory = user.inventory
     ? user.inventory.split(',').map(s => s.trim()).filter(Boolean)
     : [];
 
@@ -341,10 +341,10 @@ function startChatListener() {
   chatClient.on('message', (channel, tags, message, self) => {
     if (self) return; // Ignore messages from the bot itself
 
-    if (message.startsWith('!')) {
+   
+    if (typeof message === 'string' && message.startsWith('!')) {
       const args = message.slice(1).split(' ');
       const command = args.shift().toLowerCase();
-
       if (command === 'leaderboard') {
         let target = args[0] ? args[0].toLowerCase().trim() : tags.username.toLowerCase().trim();
         target = target.replace(/^@/, '');
@@ -377,11 +377,16 @@ function startChatListener() {
       else if (command === 'giveskin') {
         const admins = process.env.CONE_ADMIN ? process.env.CONE_ADMIN.split(',').map(a => a.trim().toLowerCase()) : [];
         if (admins.includes(tags.username.toLowerCase())) {
-          if (args.length === 0) {
-            sendChatMessage(channel, `@${tags.username}, please provide a user name and skin name'.`);
+          if (!Array.isArray(args) || args.length < 2) {
+            console.log(`${tags.username} used !giveskin but failed to provide correct input.`);
+            return;
           } else {
-            const name = args[0].toLowerCase().trim().replace(/^@/, '');
-            const skin = args[1].toLowerCase().trim();
+            const name = typeof args[0] === 'string' ? args[0].toLowerCase().trim().replace(/^@/, '') : '';
+            const skin = typeof args[1] === 'string' ? args[1].toLowerCase().trim() : '';
+            if (!name || !skin) {
+              console.log(`${tags.username} used !giveskin but failed to provide correct input.`);
+              return;
+            }
             commandSkinsSet(name, skin, false)
               .then(response => sendChatMessage(channel, response))
               .catch(console.error);
@@ -391,10 +396,15 @@ function startChatListener() {
       else if (command === 'simcone') {
         const admins = process.env.CONE_ADMIN ? process.env.CONE_ADMIN.split(',').map(a => a.trim().toLowerCase()) : [];
         if (admins.includes(tags.username.toLowerCase())) {
-          if (args.length === 0) {
-            sendChatMessage(channel, `@${tags.username}, please provide a user name.`);
+          if (!Array.isArray(args) || args.length < 1) {
+            console.log(`${tags.username} used !simcone but failed to provide correct input.`);
+            return;
           } else {
-            const name = args[0].toLowerCase().trim().replace(/^@/, '');
+            const name = typeof args[0] === 'string' ? args[0].toLowerCase().trim().replace(/^@/, '') : '';
+            if (!name) {
+              console.log(`${tags.username} used !simcone but failed to provide correct input.`);
+              return;
+            }
             io.emit('addCone', name);
           }
         }
@@ -402,20 +412,33 @@ function startChatListener() {
       else if (command === 'simduel') {
         const admins = process.env.CONE_ADMIN ? process.env.CONE_ADMIN.split(',').map(a => a.trim().toLowerCase()) : [];
         if (admins.includes(tags.username.toLowerCase())) {
-          if (args.length === 0) {
-            sendChatMessage(channel, `@${tags.username}, please provide a user name and or target.`);
+          if (!Array.isArray(args) || args.length < 2) {
+            console.log(`${tags.username} used !simduel but failed to provide correct input.`);
+            return;
           } else {
-            const name = args[0].toLowerCase().trim().replace(/^@/, '');
-            const target = args[1].toLowerCase().trim().replace(/^@/, '');
-            io.emit("addConeDuel", name, target);
+            const name = typeof args[0] === 'string' ? args[0].toLowerCase().trim().replace(/^@/, '') : '';
+            const target = typeof args[1] === 'string' ? args[1].toLowerCase().trim().replace(/^@/, '') : '';
+            if (!name || !target) {
+              console.log(`${tags.username} used !simduel but failed to provide correct input.`);
+              return;
+            } else if (name === target) {
+              sendChatMessage(channel, `@${tags.username}, you cannot duel yourself.`);
+            } else {
+              io.emit("addConeDuel", name, target);
+            }
           }
         }
       }
       else if (command === 'setskin') {
-        if (args.length === 0) {
-          sendChatMessage(channel, `@${tags.username}, please provide a skin name to swap to.`);
+        if (!Array.isArray(args) || args.length < 1) {
+          console.log(`${tags.username} used !setskin but failed to provide correct input.`);
+          return;
         } else {
-          const skinName = args[0].toLowerCase().trim();
+          const skinName = typeof args[0] === 'string' ? args[0].toLowerCase().trim() : '';
+          if (!skinName) {
+            console.log(`${tags.username} used !setskin but failed to provide correct input.`);
+            return;
+          }
           commandSkinsSwap(tags.username.toLowerCase().trim(), skinName)
             .then(response => sendChatMessage(channel, response))
             .catch(console.error);
@@ -444,10 +467,16 @@ function startChatListener() {
           io.emit('addCone', "CONESTUCK");
           sendChatMessage(channel, `@${tags.username}, CONSUME spamming cones to unlock other cones.`);
         }
-        
-      }else if (command === '@drippycatcs') {
+
+      } else if (command === '@drippycatcs') {
         sendChatMessage(channel, `@${tags.username}, Hi drippycat debug agent here. Ask a mod to try !refreshcones if there are any issues. If this doesn't help please DM drippycat on discord. If Drippycat doesn't fix it within 15 minutes this script is developed to automatically bomb his appartment. Type !bombdrippycat to initiate the process.`);
-       }
+      }
+    } else if (message.startsWith('@drippycatcs')) {
+
+      if (message.toLowerCase().includes('cone')) {
+        sendChatMessage(channel, `@${tags.username}, Hi drippycat debug agent here. Ask a mod to try !refreshcones if there are any issues. If this doesn't help please DM drippycat on discord. If Drippycat doesn't fix it within 15 minutes this script is developed to automatically bomb his appartment. Type !bombdrippycat to initiate the process.`);
+      }
+
     }
   });
 }
@@ -709,13 +738,13 @@ class SkinsManager {
         const stmt = this.db.prepare('SELECT inventory FROM user_skins WHERE name = ?');
         const user = stmt.get(name);
         let inventory = user && user.inventory ? user.inventory.split(',').map(s => s.trim()) : [];
- 
+
         if (inventory.includes(skin.name)) {
-          io.emit('unboxSkinAnim', skin.name , name ,`${name} unboxed "${skin.name}" ... again (${odds}%) GAGAGA Better luck next time... `);
+          io.emit('unboxSkinAnim', skin.name, name, `${name} unboxed "${skin.name}" ... again (${odds}%) GAGAGA Better luck next time... `);
           return `${name} unboxed "${skin.name}" ... again GAGAGA better luck next time (${odds}%)..`;
         } else {
           await this.setSkin(name, skin.name);
-          io.emit('unboxSkinAnim', skin.name , name , `${name} unboxed "${skin.name}" skin (${odds}%).`);
+          io.emit('unboxSkinAnim', skin.name, name, `${name} unboxed "${skin.name}" skin (${odds}%).`);
           return `${name} unboxed "${skin.name}" skin (${odds}%).`;
         }
       }
@@ -866,7 +895,7 @@ async function getUserPaintsAndBadge(twitchUsername) {
       if (paint.image_url) {
         paintDetails.image = paint.image_url;
       }
-      
+
       if (paint.shadows && paint.shadows.length) {
         paintDetails.shadows = paint.shadows.map(shadow => ({
           x_offset: shadow.x_offset,
@@ -879,7 +908,7 @@ async function getUserPaintsAndBadge(twitchUsername) {
       }
     }
 
-    
+
     paintDetails.username = userData.username;
 
     return paintDetails;
@@ -1010,16 +1039,16 @@ async function getStreamerEmoteList() {
 async function startEventSubListener() {
   try {
     console.log('[EventSub] Initializing EventSub listener...');
-    
+
     // Create auth provider with your client ID and access token
     const authProvider = new StaticAuthProvider(
-      CONFIG.TWITCH.CLIENT_ID, 
+      CONFIG.TWITCH.CLIENT_ID,
       CONFIG.TWITCH.STREAMER_ACCESS_TOKEN
     );
-    
+
     // Create API client
     const apiClient = new ApiClient({ authProvider });
-    
+
     // Get the broadcaster ID (needed for event subscriptions)
     let broadcasterId;
     try {
@@ -1033,7 +1062,7 @@ async function startEventSubListener() {
       console.error('[EventSub] Failed to get broadcaster ID:', error);
       return;
     }
-    
+
     // Create EventSub listener with proper event handlers
     const listener = new EventSubWsListener({
       apiClient,
@@ -1042,24 +1071,24 @@ async function startEventSubListener() {
         name: 'eventsub'
       }
     });
-    
+
     // Add event handlers using the .on() method (proper approach)
     listener.on('websocket-error', (error) => {
       console.error('[EventSub] WebSocket error:', error);
     });
-    
+
     listener.on('websocket-reconnect', () => {
       console.log('[EventSub] WebSocket reconnected');
     });
-    
+
     listener.on('error', (error) => {
       console.error('[EventSub] General error:', error);
     });
-    
+
     // Start the listener
     await listener.start();
     console.log('[EventSub] Listener started');
-    
+
     try {
       // Subscribe to channel point redemptions
       try {
@@ -1084,14 +1113,14 @@ async function startEventSubListener() {
       // Check if the error is because we've already subscribed
       if (error.message?.includes('Too Many Requests') || error.message?.includes('maximum subscriptions')) {
         console.log('[EventSub] Already subscribed to channel point redemptions, continuing...');
-        
+
         // Even if we can't create a new subscription, we should still receive events
         // for existing subscriptions with the same credentials
       } else {
         console.error('[EventSub] Failed to subscribe to channel redemptions:', error);
       }
     }
-    
+
     return listener;
   } catch (error) {
     console.error('[EventSub] Error setting up EventSub:', error);
@@ -1105,7 +1134,7 @@ async function startEventSubListener() {
 function handleEventSubRedemption(event) {
   try {
     console.log(`[EventSub] Reward redeemed: ${event.rewardTitle} by ${event.userDisplayName}`);
-    
+
     // Format the redemption in the structure expected by our handlers
     const redemption = {
       reward: {
@@ -1119,7 +1148,7 @@ function handleEventSubRedemption(event) {
       },
       user_input: event.input || ''
     };
-    
+
     // Map the reward ID to the appropriate handler
     if (event.rewardId === CONFIG.TWITCH.DUEL_REWARD) {
       handleDuelReward(redemption);
@@ -1265,7 +1294,7 @@ io.on('connection', async (socket) => {
     };
     socket.on('win', (name) => updateStateHandler(name, true));
     socket.on('fail', (name) => updateStateHandler(name, false));
-    socket.on('unboxfinished' , (message) =>  sendChatMessage(CONFIG.TWITCH.CHANNEL, message));
+    socket.on('unboxfinished', (message) => sendChatMessage(CONFIG.TWITCH.CHANNEL, message));
   } catch (err) {
     console.error('Socket connection error:', err);
   }
