@@ -1063,12 +1063,12 @@
 
           // Track consecutive frames nearly still
           this.stillFrameCount = 0;
-          this.stillFrameThreshold = 60;
+          this.stillFrameThreshold = 120;
 
           this.body = Bodies.fromVertices(positionX, window.innerHeight - 85, coneVertices, {
             restitution: 0.2,
             density: 0.0011,
-            friction: 0.2,
+            friction: 0.4,
             frictionAir: 0.02,
             render: DEBUG_MODE
               ? { fillStyle: 'rgba(255,0,0,0.5)', visible: true }
@@ -1225,11 +1225,15 @@
         handleStationary() {
           if (!this.hasLaunched) return;
           const still =
-            Math.abs(this.body.velocity.x) < 0.05 &&
-            Math.abs(this.body.velocity.y) < 0.05 &&
-            Math.abs(this.body.angularVelocity) < 0.05;
+            Math.abs(this.body.velocity.x) < 0.12 &&
+            Math.abs(this.body.velocity.y) < 0.12 &&
+            Math.abs(this.body.angularVelocity) < 0.12;
 
           if (still) {
+            // Clamp tiny velocities to zero to stop jitter
+            if (Math.abs(this.body.velocity.x) < 0.12) this.body.velocity.x = 0;
+            if (Math.abs(this.body.velocity.y) < 0.12) this.body.velocity.y = 0;
+            if (Math.abs(this.body.angularVelocity) < 0.12) this.body.angularVelocity = 0;
             this.stillFrameCount++;
           } else {
             this.stillFrameCount = 0;
@@ -1280,7 +1284,7 @@
         isUprightOrUpsideDown() {
           let a = this.body.angle % (2 * Math.PI);
           if (a < 0) a += 2 * Math.PI;
-          const eps = 0.2;
+          const eps = 0.35;
           // Check for upright (0) or upside down (π)
           return (a < eps || a > 2 * Math.PI - eps || Math.abs(a - Math.PI) < eps);
         }
