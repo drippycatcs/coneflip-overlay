@@ -1250,7 +1250,6 @@
               if (this.isDuelCone) {
                 this.coneManager.reportResult(this.name, 'win');
               } else {
-                this.coneManager.reportResult(this.name, 'win');
                 this.gameManager.socket.emit('win', this.name);
               }
               this.startFadeOut();
