@@ -272,8 +272,8 @@ async function commandSkinsInventory(name) {
   if (leaderboard[0]?.name === name && !skins.includes('gold')) {
     skins.push('gold');
   }
-
-  return `${name} owns: ${skins.join(', ')} Currently selected: ${user.skin}`;
+  skins.push('pride');
+  return `${name} owns: ${skins.join(', ')} | Currently selected: ${user.skin}`;
 }
 
 async function commandSkinsSet(name, skin, random) {
@@ -308,7 +308,7 @@ async function commandSkinsSwap(name, skin) {
     console.log(`Dynamically added "gold" for ${name}.`);
   }
 
-  if (checkInventory.includes(skin) || skin === 'default') {
+  if (checkInventory.includes(skin) || skin === 'default' || skin === 'pride') {
     SkinsManager.db.prepare('UPDATE user_skins SET skin = ? WHERE name = ?').run(skin, name);
     io.emit('skinRefresh');
     return `Swapped ${name}'s skin to ${skin}.`;
@@ -478,12 +478,6 @@ function startChatListener() {
       }
 
     }
-
-
-    ///HERE
-
-
-    
   });
 }
 
