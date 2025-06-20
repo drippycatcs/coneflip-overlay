@@ -108,7 +108,7 @@
     #winner-container {
       display: block;
       position: fixed;
-      top: 50%;
+      top: 75%;
       left: 50%;
       transform: translate(-50%, -50%);
       text-align: center;
@@ -276,7 +276,10 @@
   <audio id="winner" src="winner.mp3"></audio>
   <!-- Hidden SVG used as a template for the cone hitbox -->
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488.1 645.4" style="display: none;">
-    <path id="hitbox" d="M185.67,0l-101.27,509.42H14.3c-4.2,0-8.2,1.79-10.9,4.87-2.2,2.58-3.4,5.86-3.4,9.14l.3,46.21v57.44c0,4.17,1.8,8.15,4.9,10.83,2.6,2.19,5.9,3.38,9.2,3.38h459.7c3.4,0,6.7-1.19,9.2-3.38,3.2-2.68,5-6.66,4.9-10.83v-90.93l.1.1v-12.62c0-4.17-1.8-8.15-4.9-10.83-2.6-2.19-5.9-3.38-9.2-3.38h-69.9L302.92,0" />
+    <path id="hitbox" d="M488,539.6v-12.7c0-4.2-1.8-8.2-4.9-10.9-2.6-2.2-5.9-3.4-9.2-3.4h-69.9L311.6,45.4
+       c-4.2-21.3-20.3-38.3-41.3-43.6-4.5-1.2-9.2-1.7-13.9-1.7h-24.8c-4.7,0-9.4.6-13.9,1.7c-21,5.4-37.1,22.3-41.3,43.6
+       l-92.3,467.2H14c-4.2,0-8.2,1.8-10.9,4.9c-2.2,2.6-3.4,5.9-3.4,9.2L0,573.2v57.8c0,4.2,1.8,8.2,4.9,10.9
+       c2.6,2.2,5.9,3.4,9.2,3.4h459.7c3.4,0,6.7-1.2,9.2-3.4c3.2-2.7,5-6.7,4.9-10.9v-91c0-0.2,0-0.3,0-0.5Z" />
   </svg>
 
   <script>
@@ -336,6 +339,7 @@
           let textSpan = document.createElement('span');
           textSpan.className = 'paint-text';
           textSpan.textContent = originalText;
+          textSpan.style.color = "white";
           wrapper.appendChild(shadowSpan);
           wrapper.appendChild(textSpan);
           nameElement.appendChild(wrapper);
@@ -347,7 +351,7 @@
 
         textSpan.classList.remove('no7TV');
         nameElement.style.display = "inline-block";
-        nameElement.style.opacity = "0";
+        nameElement.style.opacity = "1";
         nameElement.style.transition = "opacity 0.5s ease";
 
         fetch(`/api/7tv/paint?name=${encodeURIComponent(playerName)}`)
@@ -367,7 +371,6 @@
          
               if (cssValue) {
                 if (typeof CSS !== "undefined" && CSS.supports && CSS.supports("-webkit-background-clip", "text")) {
-
                   textSpan.style.background = cssValue;
                   textSpan.style.webkitBackgroundClip = "text";
                   textSpan.style.backgroundClip = "text";
@@ -381,11 +384,10 @@
                   if (paintData.shadows && Array.isArray(paintData.shadows) && paintData.shadows.length > 0) {
                     const multiplier = nameElement.classList.contains('winner-name') ? 2 : 1;
                     const filterValue = paintData.shadows
-                 .map(shadow =>
-                 `drop-shadow(${convertColor(shadow.color)} ${shadow.x_offset * multiplier}px ${shadow.y_offset * multiplier}px ${shadow.radius * multiplier}px)`
-                 )
-                 .join(' ');
-                 console.log(filterValue);
+                      .map(shadow =>
+                        `drop-shadow(${convertColor(shadow.color)} ${shadow.x_offset * multiplier}px ${shadow.y_offset * multiplier}px ${shadow.radius * multiplier}px)`
+                      )
+                      .join(' ');
                     shadowSpan.style.setProperty("filter", filterValue, "important");
                     shadowSpan.style.setProperty("text-shadow", "none", "important");
                     shadowSpan.style.display = "inline";
@@ -409,18 +411,11 @@
               shadowSpan.style.display = "none";
       
               console.log("No paint data found for " + playerName);
-              
             }
-      
-            setTimeout(() => {
-              nameElement.style.opacity = "1";
-            }, 10);
           })
           .catch(error => {
             console.log(`Error fetching paint for ${playerName}:`, error);
-            setTimeout(() => {
-              nameElement.style.opacity = "1";
-            }, 10);
+            textSpan.style.color = "white";
           });
       }
 
@@ -1068,7 +1063,7 @@
           this.body = Bodies.fromVertices(positionX, window.innerHeight - 85, coneVertices, {
             restitution: 0.2,
             density: 0.0011,
-            friction: 0.4,
+            friction: 0.2,
             frictionAir: 0.02,
             render: DEBUG_MODE
               ? { fillStyle: 'rgba(255,0,0,0.5)', visible: true }

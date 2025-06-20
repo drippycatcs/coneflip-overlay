@@ -7,7 +7,7 @@ const tmi = require('tmi.js');
 const CLIENT_ID = process.env.TWITCH_CLIENT_ID;
 const STREAMER_ACCESS_TOKEN = process.env.STREAMER_ACCESS_TOKEN;
 const BOT_ACCESS_TOKEN = process.env.BOT_ACCESS_TOKEN;
-const USER_ID = '782127507';
+const USER_ID = '782127507'; //replace with your Twitch user ID
 const DB_PATH = './data/leaderboard.db';
 const WS_URL = 'wss://eventsub.wss.twitch.tv/ws';
 const API_URL = 'http://localhost:3000/api/cones/add';
@@ -43,6 +43,7 @@ ws.on('message', (data) => {
     if (message.metadata && message.metadata.message_type === 'notification') {
         const event = message.payload.event;
         if (event && event.user_name) {
+            console.log(`👥 New follower: ${event.user_name} (${event.user_login})`);
             checkFollowerInLeaderboard(event.user_name);
         }
     }
@@ -91,6 +92,31 @@ function checkFollowerInLeaderboard(username) {
             console.log(`New follower ${username} already exists in leaderboard: Rank ${user.rank}, Wins: ${user.wins}, Losses: ${user.fails}, Winrate: ${user.winrate.toFixed(2)}%`);
         } else {
             console.log(`New follower ${username} does not exist in the leaderboard.`);
+            
+            // Check if streamer is live before adding to leaderboard and sending message
+            checkStreamerStatusAndHandleFollower(username);
+        }
+    } catch (error) {
+        console.error('Error checking leaderboard:', error);
+    }
+}
+
+async function checkStreamerStatusAndHandleFollower(username) {
+    try {
+        const response = await axios.get(`https://api.twitch.tv/helix/streams?user_id=${USER_ID}`, {
+            headers: {
+                'Client-ID': CLIENT_ID,
+                'Authorization': `Bearer ${STREAMER_ACCESS_TOKEN}`
+            }
+        });
+
+        const streamData = response.data.data[0];
+        const isLive = !!streamData;
+
+        if (isLive) {
+            console.log(`🎬 Streamer is LIVE! Adding ${username} to leaderboard and sending welcome message.`);
+            
+            // Add to leaderboard and send welcome message
             axios.get(`${API_URL}?name=${encodeURIComponent(username)}`)
                 .then(() => {
                     sendChatMessage(username);
@@ -98,9 +124,19 @@ function checkFollowerInLeaderboard(username) {
                 .catch(error => {
                     console.error(`Error adding ${username} to leaderboard:`, error.message);
                 });
+        } else {
+            console.log(`🔴 Streamer is OFFLINE. Not adding ${username} to leaderboard.`);
+            
+            // Don't add to leaderboard when offline
         }
     } catch (error) {
-        console.error('Error checking leaderboard:', error);
+        console.error('Error checking streamer status:', error.message);
+        
+        // If we can't check status, still add to leaderboard but don't send message
+        axios.get(`${API_URL}?name=${encodeURIComponent(username)}`)
+            .catch(error => {
+                console.error(`Error adding ${username} to leaderboard:`, error.message);
+            });
     }
 }
 

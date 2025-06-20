@@ -446,7 +446,7 @@ function startChatListener() {
       }
       else if (command === 'coneskins') {
         const response = commandSkinsOdds();
-        sendChatMessage(channel, `${response}. You can view them here: https://drippycatcs.github.io/coneflip-overlay/commands#-cone-skins .`);
+        sendChatMessage(channel, `@${tags.username}, You can view cone skins here: https://drippycatcs.github.io/coneflip-overlay/commands#-cone-skins  Use !myskins to view your owned skins`);
       }
       else if (command === 'conehelp') {
         sendChatMessage(channel, `@${tags.username}, Available commands: coneflip, conestats, leaderboard, myskins, setskin, coneskins view them all here: https://drippycatcs.github.io/coneflip-overlay/commands .`);
